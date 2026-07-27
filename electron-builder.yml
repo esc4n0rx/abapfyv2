@@ -27,10 +27,7 @@ mac:
   icon: build/icon.png
   category: public.app-category.developer-tools
   target:
-    - target: dmg
-      arch:
-        - x64
-        - arm64
+    - dmg
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
