@@ -1,0 +1,36 @@
+SOLICITAÇÃO DE DESENVOLVIMENTO ABAP — PROGRAMA SIMPLES (JOB)
+==============================================================
+
+OBJETO: ZPRG_ATUALIZA_STATUS_PEDIDO
+TIPO: Programa simples (execução em background / job)
+TRANSAÇÃO: SE38 / SA38 (sem tela de seleção customizada, só parâmetros)
+EMPRESA/MANDANTE: 1000
+AUTOR: Paulo Oliveira
+
+DESCRIÇÃO RESUMIDA:
+Programa batch, executado diariamente via job, que atualiza o campo
+customizado ZZSTATUS na tabela ZTB_PEDIDO_STATUS com o status calculado
+(ABERTO/PARCIAL/ENCERRADO) de todos os pedidos de compra ativos.
+
+PARÂMETROS DE SELEÇÃO:
+  - P_BUKRS TYPE BUKRS (obrigatório, default '1000')
+  - P_TEST TYPE ABAP_BOOL AS CHECKBOX (modo de teste, não grava se marcado)
+
+CONTEXTO / FLUXO:
+1. Selecionar todos os pedidos ativos (EKKO-LOEKZ = '') da empresa informada
+2. Para cada pedido, calcular o status conforme a mesma lógica do
+   ZFM_CALC_SALDO_PEDIDO (chamar esse function module se já existir, ou
+   replicar a lógica: comparar EKPO-MENGE com quantidade recebida via EKBE)
+3. Comparar o status calculado com o valor atual em ZTB_PEDIDO_STATUS-ZZSTATUS
+4. Se diferente, atualizar (MODIFY) o registro; se não existir, inserir novo
+5. Se P_TEST = 'X', apenas exibir em um relatório simples (WRITE) os pedidos
+   que seriam alterados, sem gravar
+6. Ao final, exibir contador de registros processados/atualizados via WRITE
+
+REGRAS DE NEGÓCIO:
+1. Processar em pacotes de 5000 pedidos (usar PACKAGE SIZE no SELECT
+   principal) para não estourar memória
+2. Registrar em log de aplicação (BAL_LOG) qualquer erro de UPDATE/INSERT,
+   sem interromper o processamento dos demais pedidos
+3. O programa deve poder ser reexecutado sem gerar duplicidade
+   (usar MODIFY, nunca INSERT direto sem checar existência)

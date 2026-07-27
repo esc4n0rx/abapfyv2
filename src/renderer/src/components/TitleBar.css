@@ -1,0 +1,65 @@
+.titlebar {
+  -webkit-app-region: drag;
+  height: var(--titlebar-height);
+  min-height: var(--titlebar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+  border-top-left-radius: var(--app-corner-radius);
+  border-top-right-radius: var(--app-corner-radius);
+  padding-left: var(--space-md);
+}
+
+.titlebar-drag {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.titlebar-brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.2px;
+  color: var(--color-ink-subtle);
+}
+
+.titlebar-controls {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.titlebar-btn {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  color: var(--color-ink-subtle);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.titlebar-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+.titlebar-btn:active {
+  background: var(--color-surface-3);
+}
+
+.titlebar-btn-close:hover {
+  background: var(--color-semantic-danger);
+  color: var(--color-on-primary);
+}
+
+.titlebar-btn-close:active {
+  background: #c53a3e;
+}

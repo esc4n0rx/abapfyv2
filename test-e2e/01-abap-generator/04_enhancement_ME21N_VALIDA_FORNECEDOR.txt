@@ -1,0 +1,44 @@
+SOLICITAÇÃO DE DESENVOLVIMENTO ABAP — ENHANCEMENT / BAdI
+=========================================================
+
+OBJETO: ZENH_VALIDA_FORNECEDOR_BLOQ
+TIPO: Enhancement (BAdI)
+PROGRAMA/TRANSAÇÃO ALVO: ME21N (Criação de Pedido de Compra)
+ENHANCEMENT SPOT: MM_PUR_XMAS (ou spot de validação de PO equivalente)
+NOME DO SPOT: ZENH_ME21N_VALIDACOES
+EMPRESA/MANDANTE: 1000
+AUTOR: Paulo Oliveira
+
+DESCRIÇÃO RESUMIDA:
+Implementação de BAdI para bloquear a criação de pedidos de compra (ME21N)
+para fornecedores que estejam marcados como "bloqueado para novos pedidos"
+em uma tabela Z customizada (ZTB_FORN_BLOQ), exibindo mensagem de erro
+impedindo a gravação.
+
+CONTEXTO / FLUXO:
+Ao usuário salvar um pedido de compra na ME21N (ou via BAPI equivalente),
+o sistema deve, antes da gravação:
+1. Ler o(s) fornecedor(es) (LIFNR) presentes no cabeçalho do pedido em
+   processamento
+2. Verificar na tabela ZTB_FORN_BLOQ se existe um registro ativo
+   (DT_FIM_BLOQ >= data atual ou DT_FIM_BLOQ inicial = bloqueio indefinido)
+   para o LIFNR + BUKRS do pedido
+3. Se encontrado, exibir mensagem de erro (MESSAGE TYPE 'E') informando o
+   motivo do bloqueio (campo MOTIVO da ZTB_FORN_BLOQ) e impedir o save
+4. Se não encontrado, permitir o fluxo normal
+
+MÉTODO A IMPLEMENTAR (BAdI):
+  Escolher o método de validação de save/check apropriado da interface do
+  BAdI de pedido de compra (ex.: IF_EX_ME_PROCESS_PO_CUST~FIELDCHECK ou
+  CHECK, conforme disponibilidade no spot MM_PUR_XMAS)
+
+REGRAS DE NEGÓCIO:
+1. O bloqueio deve valer tanto para criação (ME21N) quanto alteração
+   (ME22N) do pedido
+2. Não bloquear se o usuário logado pertencer ao grupo de autorização
+   Z_LIBERA_FORN_BLOQ (validar via AUTHORITY-CHECK em objeto customizado
+   ZMM_FORN_BLOQ)
+3. Registrar log de tentativa bloqueada na tabela ZTB_LOG_BLOQ_PEDIDO
+   (fornecedor, usuário, data/hora, pedido tentado)
+4. A mensagem de erro deve usar a classe de mensagens ZMM_PEDIDOS,
+   número 001: "Fornecedor &1 bloqueado para novos pedidos: &2"

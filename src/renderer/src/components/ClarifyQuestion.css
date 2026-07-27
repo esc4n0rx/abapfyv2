@@ -1,0 +1,117 @@
+.clarify-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.clarify-question-text {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  font-family: var(--font-text);
+  font-size: 14px;
+  color: var(--color-ink);
+  line-height: 1.5;
+}
+
+.clarify-question-text svg {
+  color: var(--color-primary-hover);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.clarify-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clarify-option {
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink-muted);
+  font-family: var(--font-text);
+  font-size: 13px;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.clarify-option:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  border-color: var(--color-hairline-strong);
+  color: var(--color-ink);
+}
+
+.clarify-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clarify-custom {
+  display: flex;
+  gap: 6px;
+}
+
+.clarify-custom input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  font-family: var(--font-text);
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.clarify-custom input:focus {
+  border-color: var(--color-hairline-strong);
+}
+
+.clarify-custom input:disabled {
+  opacity: 0.5;
+}
+
+.clarify-custom button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink-subtle);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.clarify-custom button:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.clarify-custom button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.clarify-answered {
+  font-family: var(--font-text);
+  font-size: 11px;
+  color: var(--color-semantic-success);
+}

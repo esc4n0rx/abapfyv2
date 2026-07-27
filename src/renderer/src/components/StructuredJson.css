@@ -1,0 +1,127 @@
+.structured-json {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.structured-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.structured-field-block {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.structured-field-label {
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--color-ink-tertiary);
+  flex-shrink: 0;
+}
+
+.structured-field-text {
+  margin: 0;
+  font-family: var(--font-text);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  white-space: pre-wrap;
+}
+
+.structured-field-number {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.structured-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  text-transform: capitalize;
+}
+
+.structured-badge-success {
+  background: rgba(39, 166, 68, 0.14);
+  color: var(--color-semantic-success);
+}
+
+.structured-badge-warning {
+  background: rgba(217, 140, 43, 0.14);
+  color: #d98c2b;
+}
+
+.structured-badge-danger {
+  background: rgba(229, 72, 77, 0.14);
+  color: var(--color-semantic-danger);
+}
+
+.structured-badge-neutral {
+  background: var(--color-surface-2);
+  color: var(--color-ink-subtle);
+}
+
+.structured-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.structured-chip {
+  background: var(--color-surface-2);
+  color: var(--color-ink-muted);
+  font-family: var(--font-text);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  padding: 3px 9px;
+}
+
+.structured-array {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.structured-array-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.structured-array-card-header {
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.structured-array-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.structured-nested {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  padding-left: var(--space-sm);
+  border-left: 2px solid var(--color-hairline);
+}

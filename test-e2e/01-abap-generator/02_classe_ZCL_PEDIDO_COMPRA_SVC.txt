@@ -1,0 +1,54 @@
+SOLICITAÇÃO DE DESENVOLVIMENTO ABAP — CLASSE OOP
+=================================================
+
+OBJETO: ZCL_PEDIDO_COMPRA_SVC
+TIPO: Classe ABAP (CLAS)
+SUPERCLASSE: (nenhuma)
+VISIBILIDADE: Public
+INTERFACES: ZIF_PEDIDO_COMPRA_SVC
+EMPRESA/MANDANTE: 1000
+AUTOR: Paulo Oliveira
+
+DESCRIÇÃO RESUMIDA:
+Classe de serviço para consulta e atualização de pedidos de compra,
+encapsulando as regras de liberação (release) e bloqueio de pedidos,
+para ser reutilizada tanto por relatórios quanto por um futuro serviço OData.
+
+CONTEXTO / FLUXO:
+A classe deve expor os seguintes métodos públicos (via interface
+ZIF_PEDIDO_COMPRA_SVC):
+  - GET_PEDIDO( IMPORTING iv_ebeln TYPE ebeln
+                RETURNING VALUE(rs_pedido) TYPE zst_pedido_compra )
+    Lê EKKO + EKPO e retorna uma estrutura consolidada com cabeçalho e itens.
+  - CHECK_LIBERACAO( IMPORTING iv_ebeln TYPE ebeln
+                     RETURNING VALUE(rv_liberado) TYPE abap_bool )
+    Verifica na tabela EKKO-FRGKE se o pedido está totalmente liberado.
+  - BLOQUEAR_PEDIDO( IMPORTING iv_ebeln TYPE ebeln
+                     RAISING zcx_pedido_compra )
+    Marca o pedido como bloqueado (EKKO-STATU = 'U') via BAPI
+    BAPI_PO_CHANGE, com tratamento de erros da BAPIRET2.
+  - LIBERAR_PEDIDO( IMPORTING iv_ebeln TYPE ebeln
+                    RAISING zcx_pedido_compra )
+    Executa a liberação do pedido via BAPI_PO_RELEASE.
+
+MÉTODOS PRIVADOS:
+  - VALIDAR_PEDIDO_EXISTE( IMPORTING iv_ebeln TYPE ebeln
+                           RAISING zcx_pedido_compra )
+    Verifica se o pedido existe na EKKO antes de qualquer operação.
+
+ATRIBUTOS:
+  - mv_bukrs TYPE bukrs (privado) — empresa default usada nas validações,
+    setado no construtor.
+
+CONSTRUTOR:
+  IMPORTING iv_bukrs TYPE bukrs OPTIONAL (default '1000')
+
+REGRAS DE NEGÓCIO:
+1. Toda exceção de negócio deve usar a classe ZCX_PEDIDO_COMPRA (criar se
+   não existir), nunca RAISE de exceções genéricas
+2. As chamadas de BAPI devem sempre finalizar com BAPI_TRANSACTION_COMMIT
+   (WAIT = 'X') em caso de sucesso, ou BAPI_TRANSACTION_ROLLBACK em erro
+3. Nenhum método deve fazer COMMIT WORK diretamente — sempre via BAPI wrapper
+4. Seguir Clean ABAP: métodos pequenos, um nível de abstração por método
+5. Criar testes unitários (ABAP Unit) com duplo de teste para o acesso a
+   banco (usando CL_ABAP_TESTDOUBLE ou LIF_DB_READER injetável)

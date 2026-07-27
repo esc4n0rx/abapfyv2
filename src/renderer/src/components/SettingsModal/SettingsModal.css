@@ -1,0 +1,120 @@
+.settings-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--color-semantic-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  animation: settings-overlay-in 160ms ease;
+}
+
+.settings-modal {
+  width: min(720px, calc(100% - 64px));
+  height: min(520px, calc(100% - 64px));
+  display: flex;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: settings-modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 160ms ease;
+}
+
+.settings-modal-wide {
+  width: min(920px, calc(100% - 64px));
+  height: min(600px, calc(100% - 64px));
+}
+
+.settings-nav {
+  width: 200px;
+  min-width: 200px;
+  background: var(--color-canvas);
+  border-right: 1px solid var(--color-hairline);
+  padding: var(--space-md) var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  padding: 0 var(--space-sm) var(--space-md);
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px var(--space-sm);
+  border-radius: var(--radius-md);
+  font-family: var(--font-text);
+  font-size: 13px;
+  color: var(--color-ink-subtle);
+  text-align: left;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.settings-nav-item:hover {
+  color: var(--color-ink);
+}
+
+.settings-nav-item-active {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow-y: auto;
+  padding: var(--space-xl);
+}
+
+.settings-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  color: var(--color-ink-subtle);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.settings-close:hover {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+@keyframes settings-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes settings-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -1,0 +1,43 @@
+.agent-card {
+  justify-content: space-between;
+}
+
+.agent-card-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-text);
+  font-size: 10px;
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+}
+
+.agent-card-badge-default {
+  color: var(--color-primary-hover);
+  background: var(--color-surface-2);
+}
+
+.agent-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: 4px;
+}
+
+.agent-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-text);
+  font-size: 11px;
+  color: var(--color-ink-subtle);
+  transition: color 120ms ease;
+}
+
+.agent-card-action:hover {
+  color: var(--color-ink);
+}
+
+.agent-card-action-danger:hover {
+  color: var(--color-semantic-danger);
+}

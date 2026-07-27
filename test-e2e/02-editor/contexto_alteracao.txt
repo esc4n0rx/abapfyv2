@@ -1,0 +1,34 @@
+CONTEXTO / OBJETIVO DA ALTERAÇÃO
+================================
+
+PROGRAMA: ZREL_PEDIDOS_ABERTOS (versão atual anexada — WRITE simples)
+
+OBJETIVO:
+Evoluir o relatório atual (que hoje usa WRITE em loop) para exibir os dados
+em um ALV Grid (CL_SALV_TABLE), corrigindo também os problemas de
+performance existentes no código atual.
+
+O QUE PRECISA MUDAR:
+1. Substituir a saída via WRITE por um ALV Grid usando CL_SALV_TABLE,
+   com fieldcatalog automático a partir da tabela GT_SAIDA
+2. Adicionar subtotal por fornecedor (LIFNR) no ALV
+3. Corrigir a leitura de EKPO, que hoje está sendo feita dentro do LOOP AT
+   gt_ekko (SELECT dentro de LOOP) — deve virar um único SELECT com
+   FOR ALL ENTRIES fora do loop
+4. Corrigir a leitura de LFA1-NAME1, que hoje é feita dentro do loop de
+   itens (repete a mesma leitura várias vezes para o mesmo fornecedor) —
+   deve ser uma única leitura consolidada antes do loop de montagem
+5. Adicionar a coluna "quantidade pendente" calculada a partir do histórico
+   de pedido (EKBE, movimento 101), igual à regra já usada no relatório
+   original de referência
+6. Adicionar um novo parâmetro de seleção opcional para Centro (WERKS)
+
+REGRAS DE NEGÓCIO A MANTER/APLICAR:
+1. Ignorar pedidos com LOEKZ preenchido
+2. Ignorar itens de serviço (PSTYP = '9')
+3. Usar FOR ALL ENTRIES somente após checar que a tabela interna não está
+   vazia
+
+RESULTADO ESPERADO:
+Um programa com boas práticas (Clean ABAP), sem SELECT dentro de LOOP,
+exibindo os dados em ALV Grid com subtotal por fornecedor.

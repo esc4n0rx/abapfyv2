@@ -1,0 +1,118 @@
+.ef-docx-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.ef-docx-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.ef-docx-icon-generating {
+  background: var(--color-surface-2);
+  color: var(--color-primary-hover);
+  animation: ef-docx-pulse 1400ms ease-in-out infinite;
+}
+
+.ef-docx-icon-ready {
+  background: rgba(39, 166, 68, 0.12);
+  color: var(--color-semantic-success);
+}
+
+.ef-docx-icon-error {
+  background: rgba(229, 72, 77, 0.12);
+  color: var(--color-semantic-danger);
+}
+
+.ef-docx-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ef-docx-title {
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.ef-docx-subtitle {
+  font-family: var(--font-text);
+  font-size: 11.5px;
+  color: var(--color-ink-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ef-docx-progress {
+  width: 100%;
+  max-width: 220px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.ef-docx-progress-bar {
+  width: 40%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  animation: ef-docx-sweep 1100ms ease-in-out infinite;
+}
+
+.ef-docx-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  transition: background-color 120ms ease;
+}
+
+.ef-docx-download:hover {
+  background: var(--color-primary-hover);
+}
+
+@keyframes ef-docx-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.75;
+  }
+}
+
+@keyframes ef-docx-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}

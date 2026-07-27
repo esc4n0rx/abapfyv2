@@ -1,0 +1,40 @@
+DADOS DO CABEÇALHO (preencher na tela de Estimativas)
+======================================================
+Cliente/Empresa: Acme Distribuidora Ltda
+Tipo de Projeto: Report + CDS View + Enhancement
+Versão SAP: S/4HANA 2023
+Modo de entrada: Manual (contexto livre)
+
+CONTEXTO DO PROJETO
+====================
+O cliente precisa de uma solução completa para acompanhamento de pedidos
+de compra em aberto, composta por três entregáveis:
+
+1. Um relatório (Report) ZREL_PEDIDOS_ABERTOS, com tela de seleção
+   (organização de compras, fornecedor, data, centro), leitura de EKKO/
+   EKPO/EKBE, cálculo de quantidade pendente e exibição em ALV Grid com
+   subtotal por fornecedor, exportação Excel e botão de detalhe (Call
+   Transaction ME23N).
+
+2. Uma CDS View de interface (Z_I_PEDIDOS_COMPRA) expondo os mesmos dados
+   de cabeçalho/item de pedido, com associations para Supplier, Material e
+   Plant, anotações de OData/Fiori e DCL de autorização (M_BEST_EKO,
+   M_BEST_WRK).
+
+3. Uma implementação de BAdI (ZENH_VALIDA_FORNECEDOR_BLOQ) na ME21N/ME22N
+   para bloquear a criação/alteração de pedidos para fornecedores marcados
+   como bloqueados em tabela Z customizada, com log de tentativas e
+   autorização de exceção para um grupo específico de usuários.
+
+REGRAS / RESTRIÇÕES ADICIONAIS:
+- O cliente já possui a tabela ZTB_FORN_BLOQ criada (não entra no escopo
+  de criação de tabela, apenas o código de validação)
+- O ambiente é S/4HANA 2023 on-premise, sem Fiori Launchpad customizado
+  ainda em produção (a CDS view será só a base, sem app Fiori neste
+  primeiro momento)
+- Não há testes automatizados (ABAP Unit) previstos neste projeto — não
+  considerar esse esforço na estimativa
+- O cliente tem 3 ambientes (DEV/QAS/PRD) com processo de transporte
+  formal, prazo de 2 dias entre cada fase de teste
+- Nível de experiência da equipe: 1 desenvolvedor pleno alocado
+  parcialmente (50%) neste projeto

@@ -1,0 +1,31 @@
+CENÁRIOS DE TESTE — ENHANCEMENT / BADI FINDER
+==============================================
+Preencha o campo "Módulo" e cole o texto de "Descreva a necessidade"
+correspondente. São 3 cenários independentes — teste um de cada vez.
+
+CENÁRIO 1
+---------
+Módulo: MM
+Descrição da necessidade:
+"Preciso de um user-exit ou BAdI que permita bloquear a gravação de um
+pedido de compra na ME21N/ME22N quando o fornecedor estiver marcado como
+bloqueado em uma tabela customizada. A validação deve rodar antes do save,
+com possibilidade de exibir mensagem de erro impedindo a gravação."
+
+CENÁRIO 2
+---------
+Módulo: SD
+Descrição da necessidade:
+"Preciso customizar o cálculo de preço de um item de ordem de venda (VA01/
+VA02) para aplicar um desconto adicional baseado no volume acumulado do
+cliente no mês, algo que rode durante a determinação de preço (pricing)
+antes de salvar a ordem."
+
+CENÁRIO 3
+---------
+Módulo: FI
+Descrição da necessidade:
+"Preciso de um ponto de extensão para validar, no momento da liberação de
+um documento de pagamento (F110 ou FB70), se o fornecedor/cliente possui
+dados bancários cadastrados e válidos, bloqueando a liberação caso não
+tenha, com uma mensagem customizada explicando o motivo."

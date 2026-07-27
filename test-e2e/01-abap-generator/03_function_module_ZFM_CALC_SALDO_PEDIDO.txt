@@ -1,0 +1,54 @@
+SOLICITAÇÃO DE DESENVOLVIMENTO ABAP — FUNCTION MODULE
+======================================================
+
+OBJETO: ZFM_CALC_SALDO_PEDIDO
+TIPO: Function Module
+GRUPO DE FUNÇÃO: ZMM_PEDIDOS
+EMPRESA/MANDANTE: 1000
+AUTOR: Paulo Oliveira
+
+DESCRIÇÃO RESUMIDA:
+Function module reutilizável que calcula o saldo pendente de entrega de
+um pedido de compra, para ser chamado por relatórios, BAdIs e pela classe
+de serviço ZCL_PEDIDO_COMPRA_SVC.
+
+PARÂMETROS:
+
+IMPORTING:
+  - IV_EBELN TYPE EBELN (obrigatório) — número do pedido de compra
+  - IV_EBELP TYPE EBELP OPTIONAL — item do pedido; se vazio, calcula para
+    todos os itens
+
+EXPORTING:
+  - EV_QTD_PENDENTE TYPE MENGE_D — quantidade total pendente (soma dos itens
+    filtrados)
+  - EV_STATUS TYPE CHAR10 — 'ABERTO' / 'PARCIAL' / 'ENCERRADO'
+
+TABLES / PARÂMETROS TABELA:
+  - ET_ITENS TYPE STANDARD TABLE OF ZST_ITEM_SALDO — detalhe por item, com
+    campos EBELP, MATNR, MENGE, QTD_ENTREGUE, QTD_PENDENTE
+
+EXCEPTIONS:
+  - PEDIDO_NAO_ENCONTRADO
+  - ITEM_NAO_ENCONTRADO
+
+CONTEXTO / LÓGICA:
+1. Validar se o pedido existe em EKKO; se não existir, RAISE
+   PEDIDO_NAO_ENCONTRADO
+2. Ler itens do pedido em EKPO (filtrado por EBELP se informado); se
+   IV_EBELP foi passado e não existe, RAISE ITEM_NAO_ENCONTRADO
+3. Para cada item, ler EKBE com BEWTP = 'E' e BWART = '101' para somar a
+   quantidade já recebida (MENGE do EKBE)
+4. Calcular quantidade pendente = EKPO-MENGE - quantidade recebida
+5. Preencher ET_ITENS com o detalhe de cada item
+6. Determinar EV_STATUS:
+   - 'ENCERRADO' se todos os itens tiverem pendente = 0
+   - 'ABERTO' se nenhum item tiver sido recebido
+   - 'PARCIAL' nos demais casos
+7. EV_QTD_PENDENTE = soma de QTD_PENDENTE de todos os itens em ET_ITENS
+
+REGRAS DE NEGÓCIO:
+1. Ignorar itens de serviço (EKPO-PSTYP = '9')
+2. Ignorar itens marcado para eliminação (EKPO-LOEKZ <> '')
+3. Usar FOR ALL ENTRIES para leitura da EKBE, protegendo contra tabela vazia
+4. O function module deve ser "remote-enabled" = não (uso interno apenas)

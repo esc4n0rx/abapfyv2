@@ -1,0 +1,50 @@
+DADOS DO CABEÇALHO (preencher na tela de Especificação Funcional)
+==================================================================
+Autor: Paulo Oliveira
+Empresa Cliente: Acme Distribuidora Ltda
+Nome do Projeto (opcional): Acompanhamento de Pedidos de Compra Abertos
+
+CONTEXTO DO PROJETO
+====================
+O QUE PRECISA SER CONSTRUÍDO:
+Um relatório ABAP (transação customizada ZMM01) para o time de compras
+acompanhar pedidos de compra em aberto, permitindo identificar rapidamente
+quais pedidos ainda têm saldo pendente de entrega por fornecedor.
+
+PROCESSO DE NEGÓCIO:
+Hoje o time de compras usa transações padrão (ME2M/ME2L) que não mostram
+de forma consolidada o saldo pendente por fornecedor, exigindo exportação
+manual para Excel e cruzamento de dados. O novo relatório deve eliminar
+esse retrabalho manual, entregando a informação já calculada e agrupada.
+
+TABELAS E CAMPOS SAP ENVOLVIDOS:
+- EKKO: EBELN, BUKRS, EKORG, LIFNR, BEDAT, BSART, LOEKZ, STATU, WAERS
+- EKPO: EBELN, EBELP, MATNR, MENGE, MEINS, NETPR, WERKS, PSTYP, LOEKZ
+- EKBE: EBELN, EBELP, BEWTP, BWART, MENGE (histórico de recebimento)
+- LFA1: LIFNR, NAME1 (nome do fornecedor)
+- MAKT: MATNR, MAKTX (descrição do material)
+
+TELA DE SELEÇÃO:
+- Organização de compras (EKORG) — obrigatório
+- Fornecedor (LIFNR) — opcional, múltipla seleção
+- Data de criação (BEDAT) — intervalo, obrigatório
+- Centro (WERKS) — opcional, múltipla seleção
+- Checkbox "Exibir itens encerrados"
+
+REGRAS DE NEGÓCIO E VALIDAÇÕES:
+1. Considerar apenas pedidos não eliminados (LOEKZ = '') e não bloqueados
+   (STATU <> 'U')
+2. Por padrão, ocultar itens totalmente entregues (quantidade pendente = 0),
+   exceto quando o checkbox "Exibir itens encerrados" estiver marcado
+3. Quantidade entregue = soma dos movimentos EKBE com BEWTP = 'E' e
+   BWART = '101'
+4. Ignorar itens de serviço (PSTYP = '9')
+5. Valor do item deve ser exibido na moeda do pedido (WAERS do EKKO)
+
+RESULTADO ESPERADO:
+ALV Grid com colunas: Pedido, Item, Fornecedor, Nome do Fornecedor,
+Material, Descrição, Centro, Quantidade Pedida, Quantidade Entregue,
+Quantidade Pendente, Valor Líquido Pendente, Data de Entrega Prevista,
+Status (ABERTO/PARCIAL/ENCERRADO). Deve permitir subtotal por fornecedor,
+exportação para Excel, e um botão "Detalhe" que abre a ME23N para o
+pedido selecionado.
