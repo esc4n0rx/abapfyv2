@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { setupAutoUpdater } from './updater'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -81,6 +82,10 @@ app.whenReady().then(() => {
 
   registerWindowControlIpc()
   createWindow()
+
+  if (mainWindow) {
+    setupAutoUpdater(mainWindow)
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

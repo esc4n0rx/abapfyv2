@@ -38,3 +38,7 @@ linux:
     - AppImage
   category: Development
 npmRebuild: false
+publish:
+  provider: github
+  owner: esc4n0rx
+  repo: abapfyv2

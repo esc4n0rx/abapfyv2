@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Bot, Palette, SlidersHorizontal, X } from 'lucide-react'
+import { Bot, Download, Palette, SlidersHorizontal, X } from 'lucide-react'
 import { GeneralSection } from './GeneralSection'
 import { AiSection } from './AiSection'
 import { ParametrosSection } from './ParametrosSection'
+import { UpdatesSection } from './UpdatesSection'
 import './SettingsModal.css'
 
-type SectionId = 'general' | 'ai' | 'parametros'
+type SectionId = 'general' | 'ai' | 'parametros' | 'updates'
 
 const SECTIONS: { id: SectionId; label: string; icon: typeof Palette }[] = [
   { id: 'general', label: 'Geral', icon: Palette },
   { id: 'ai', label: 'Inteligência Artificial', icon: Bot },
-  { id: 'parametros', label: 'Parâmetros', icon: SlidersHorizontal }
+  { id: 'parametros', label: 'Parâmetros', icon: SlidersHorizontal },
+  { id: 'updates', label: 'Atualizações', icon: Download }
 ]
 
 interface SettingsModalProps {
@@ -62,6 +64,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
           {activeSection === 'general' && <GeneralSection />}
           {activeSection === 'ai' && <AiSection />}
           {activeSection === 'parametros' && <ParametrosSection />}
+          {activeSection === 'updates' && <UpdatesSection />}
         </div>
       </div>
     </div>

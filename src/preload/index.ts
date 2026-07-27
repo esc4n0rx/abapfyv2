@@ -14,8 +14,62 @@ const windowControls = {
   }
 }
 
+interface UpdateAvailableInfo {
+  version: string
+  releaseNotes: string | null
+  releaseDate: string
+}
+
+interface UpdateProgressInfo {
+  percent: number
+  bytesPerSecond: number
+  transferred: number
+  total: number
+}
+
+const updates = {
+  getVersion: () => ipcRenderer.invoke('updates:getVersion') as Promise<string>,
+  check: () => ipcRenderer.invoke('updates:check'),
+  download: () => ipcRenderer.invoke('updates:download'),
+  install: () => ipcRenderer.invoke('updates:install'),
+  onChecking: (callback: () => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('updates:checking', listener)
+    return () => ipcRenderer.removeListener('updates:checking', listener)
+  },
+  onAvailable: (callback: (info: UpdateAvailableInfo) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: UpdateAvailableInfo): void =>
+      callback(info)
+    ipcRenderer.on('updates:available', listener)
+    return () => ipcRenderer.removeListener('updates:available', listener)
+  },
+  onNotAvailable: (callback: () => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('updates:not-available', listener)
+    return () => ipcRenderer.removeListener('updates:not-available', listener)
+  },
+  onProgress: (callback: (progress: UpdateProgressInfo) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: UpdateProgressInfo): void =>
+      callback(progress)
+    ipcRenderer.on('updates:progress', listener)
+    return () => ipcRenderer.removeListener('updates:progress', listener)
+  },
+  onDownloaded: (callback: () => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('updates:downloaded', listener)
+    return () => ipcRenderer.removeListener('updates:downloaded', listener)
+  },
+  onError: (callback: (message: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, message: string): void =>
+      callback(message)
+    ipcRenderer.on('updates:error', listener)
+    return () => ipcRenderer.removeListener('updates:error', listener)
+  }
+}
+
 const api = {
-  windowControls
+  windowControls,
+  updates
 }
 
 if (process.contextIsolated) {
