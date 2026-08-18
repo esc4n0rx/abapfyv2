@@ -48,6 +48,14 @@ Scripts SQL do projeto, aplicados via SQL Editor do Supabase ou pela CLI (`supab
     `estimativaParametrosStore.ts`).
 16. `rls/010_estimativa_parametros_rls.sql` — RLS: CRUD restrito ao dono (`auth.uid() =
     user_id`) nas duas tabelas acima.
+17. `sql/011_chats_archive.sql` — adiciona arquivamento de conversas por usuário.
+18. `sql/012_customizing_consultant_agent.sql` — cadastra, por upsert idempotente, o agente
+    padrão “Consultor de Customizing SAP”, especializado em SPRO/IMG e configuração standard.
+19. `sql/013_mcp_servers.sql` — cria `mcp_servers` e `mcp_agent_bindings`: configurações MCP
+    por usuário e associação N:N entre servidores e agentes. Credenciais SAP não são
+    persistidas nessas tabelas.
+20. `rls/013_mcp_servers_rls.sql` — restringe servidores e vínculos MCP ao usuário dono e
+    impede vincular um servidor pertencente a outra conta.
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

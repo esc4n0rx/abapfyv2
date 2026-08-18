@@ -67,9 +67,16 @@ const updates = {
   }
 }
 
+const mcp = {
+  listTools: (configs: unknown[]) => ipcRenderer.invoke('mcp:listTools', configs),
+  callTool: (config: unknown, toolName: string, args: Record<string, unknown>) =>
+    ipcRenderer.invoke('mcp:callTool', config, toolName, args)
+}
+
 const api = {
   windowControls,
-  updates
+  updates,
+  mcp
 }
 
 if (process.contextIsolated) {
@@ -80,8 +87,7 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-expect-error contextIsolation is always enabled; this branch is unreachable in practice
-  window.electron = electronAPI
-  // @ts-expect-error contextIsolation is always enabled; this branch is unreachable in practice
-  window.api = api
+  const unsafeWindow = window as unknown as Record<string, unknown>
+  unsafeWindow.electron = electronAPI
+  unsafeWindow.api = api
 }

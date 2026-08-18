@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Bot, Download, Palette, SlidersHorizontal, X } from 'lucide-react'
+import { Bot, Download, Palette, Server, SlidersHorizontal, X } from 'lucide-react'
 import { GeneralSection } from './GeneralSection'
 import { AiSection } from './AiSection'
 import { ParametrosSection } from './ParametrosSection'
 import { UpdatesSection } from './UpdatesSection'
+import { McpSection } from './McpSection'
 import './SettingsModal.css'
 
-type SectionId = 'general' | 'ai' | 'parametros' | 'updates'
+type SectionId = 'general' | 'ai' | 'mcp' | 'parametros' | 'updates'
 
 const SECTIONS: { id: SectionId; label: string; icon: typeof Palette }[] = [
   { id: 'general', label: 'Geral', icon: Palette },
   { id: 'ai', label: 'Inteligência Artificial', icon: Bot },
+  { id: 'mcp', label: 'MCP', icon: Server },
   { id: 'parametros', label: 'Parâmetros', icon: SlidersHorizontal },
   { id: 'updates', label: 'Atualizações', icon: Download }
 ]
@@ -38,7 +40,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
   return (
     <div className="settings-overlay" onMouseDown={onClose}>
       <div
-        className={`settings-modal ${activeSection === 'parametros' ? 'settings-modal-wide' : ''}`}
+        className={`settings-modal ${activeSection === 'parametros' || activeSection === 'mcp' ? 'settings-modal-wide' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <nav className="settings-nav">
@@ -63,6 +65,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
 
           {activeSection === 'general' && <GeneralSection />}
           {activeSection === 'ai' && <AiSection />}
+          {activeSection === 'mcp' && <McpSection />}
           {activeSection === 'parametros' && <ParametrosSection />}
           {activeSection === 'updates' && <UpdatesSection />}
         </div>

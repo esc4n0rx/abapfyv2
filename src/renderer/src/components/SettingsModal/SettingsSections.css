@@ -5,6 +5,104 @@
   max-width: 460px;
 }
 
+.settings-section-mcp {
+  max-width: 720px;
+}
+
+.mcp-preset-actions,
+.mcp-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.mcp-preset-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font: 500 12px var(--font-text);
+}
+
+.mcp-security-note,
+.mcp-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: var(--radius-md);
+  font: 12px/1.45 var(--font-text);
+}
+
+.mcp-security-note {
+  background: color-mix(in srgb, var(--color-semantic-warning) 10%, transparent);
+  color: var(--color-ink-subtle);
+}
+
+.mcp-error,
+.mcp-warning {
+  color: var(--color-semantic-danger);
+}
+
+.mcp-server-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.mcp-server-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+}
+
+.mcp-server-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mcp-server-header div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-text);
+}
+
+.mcp-server-header strong { color: var(--color-ink); font-size: 13px; }
+.mcp-server-header span { color: var(--color-ink-tertiary); font-size: 11px; }
+.mcp-server-description { margin: 0; color: var(--color-ink-subtle); font: 12px/1.45 var(--font-text); }
+.mcp-enabled-label, .mcp-agent-option { color: var(--color-ink-subtle); font: 12px var(--font-text); }
+.mcp-warning { font: 11px var(--font-text); }
+
+.mcp-args-input {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  margin-top: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  color: var(--color-ink);
+  font: 12px/1.45 var(--font-mono);
+}
+
+.mcp-agent-bindings { display: flex; flex-direction: column; gap: 7px; }
+.mcp-agent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.mcp-agent-option { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mcp-card-actions { align-items: center; justify-content: flex-end; }
+.mcp-test-button { border: 0; background: transparent; color: var(--color-primary); font: 500 12px var(--font-text); }
+.mcp-test-status { margin-right: auto; color: var(--color-ink-subtle); font: 11px var(--font-text); }
+.settings-muted { color: var(--color-ink-tertiary); font: 12px var(--font-text); }
+
 .settings-section-header h2 {
   font-family: var(--font-display);
   font-size: 20px;

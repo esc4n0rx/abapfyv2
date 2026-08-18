@@ -34,9 +34,38 @@ export interface UpdatesApi {
   onError: (callback: (message: string) => void) => () => void
 }
 
+export interface McpServerConfig {
+  id: string
+  name: string
+  transport: 'streamable_http' | 'stdio'
+  url: string | null
+  command: string | null
+  args: string[]
+}
+
+export interface McpToolInfo {
+  qualifiedName: string
+  serverId: string
+  serverName: string
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+  requiresConfirmation: boolean
+}
+
+export interface McpApi {
+  listTools: (configs: McpServerConfig[]) => Promise<McpToolInfo[]>
+  callTool: (
+    config: McpServerConfig,
+    toolName: string,
+    args: Record<string, unknown>
+  ) => Promise<unknown>
+}
+
 export interface Api {
   windowControls: WindowControlsApi
   updates: UpdatesApi
+  mcp: McpApi
 }
 
 declare global {

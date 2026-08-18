@@ -27,9 +27,11 @@ import { useAgentsStore, type AgentSource } from '@renderer/store/agentsStore'
 import { useChatStore, type ProjectSummary } from '@renderer/store/chatStore'
 import { useChatRuntimeStore } from '@renderer/store/chatRuntimeStore'
 import { useSkillsStore } from '@renderer/store/skillsStore'
+import { useMcpStore } from '@renderer/store/mcpStore'
 import { fetchParametrosContextBlock } from '@renderer/store/estimativaParametrosStore'
 import { parseClarify } from '@renderer/lib/clarify'
 import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
+import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
 import {
   CLAUDE_EFFORT_LABELS_PT,
   CLAUDE_EFFORT_LEVELS,
@@ -113,6 +115,7 @@ export function HomeScreen(): JSX.Element {
   }))
   const agents = useAgentsStore((state) => state.agents)
   const skills = useSkillsStore((state) => state.skills)
+  const configsForAgent = useMcpStore((state) => state.configsForAgent)
   const { createChat, persistMessage, loadChatMeta, loadChatMessages, projects } = useChatStore(
     (state) => ({
       createChat: state.createChat,
@@ -425,8 +428,30 @@ export function HomeScreen(): JSX.Element {
     let finished = false
     let iteration = 0
     const startTime = performance.now()
+    let runtimePrompt = prompt
 
     try {
+      if (agent) {
+        const mcpServers = configsForAgent(agent.source, agent.id)
+        if (mcpServers.length > 0) {
+          try {
+            const mcpEvidence = await runMcpToolLoop({
+              provider: defaultProvider,
+              model: defaultModel,
+              apiKey,
+              messages: history,
+              systemPrompt: prompt ?? undefined,
+              servers: mcpServers,
+              signal: controller.signal
+            })
+            if (mcpEvidence) runtimePrompt = `${prompt ?? ''}\n\n---\n\n${mcpEvidence}`
+          } catch (mcpError) {
+            if ((mcpError as Error).name === 'AbortError') throw mcpError
+            runtimePrompt = `${prompt ?? ''}\n\n---\n\n## Falha MCP nesta interação\nNão foi possível consultar as ferramentas configuradas: ${(mcpError as Error).message}. Informe essa limitação ao usuário e não apresente dados MCP como verificados.`
+          }
+        }
+      }
+
       while (!finished && iteration < MAX_CONTINUATIONS) {
         iteration += 1
         if (iteration > 1) {
@@ -440,7 +465,7 @@ export function HomeScreen(): JSX.Element {
           model: defaultModel,
           apiKey,
           messages: iterationHistory,
-          systemPrompt: prompt ?? undefined,
+          systemPrompt: runtimePrompt ?? undefined,
           signal: controller.signal,
           claudeEffort: defaultProvider === 'claude' ? claudeEffort : undefined,
           onDelta: (delta) => {

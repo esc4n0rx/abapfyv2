@@ -12,8 +12,9 @@ novo deve referenciar os tokens de lá (`colors`, `typography`, `rounded`, `spac
 
 - **Electron** + **electron-vite** (build/dev do main, preload e renderer)
 - **React 18** + **TypeScript** + **React Router**
-- **Zustand** para estado de autenticação
+- **Zustand** para estado de autenticação e stores do renderer
 - **Supabase** (`@supabase/supabase-js`) para auth e persistência
+- **Model Context Protocol SDK** para servidores HTTP e `stdio`
 - **electron-builder** para empacotar `.exe` (nsis) e `.dmg`
 
 ## Estrutura
@@ -192,8 +193,7 @@ ignorados de propósito.
 ### Configurações (funcional)
 
 Aberto pelo menu do usuário na sidebar (ou clicando em "Nenhuma chave de IA configurada" no
-seletor de modelo). Duas seções, ambas persistidas no Supabase (`user_settings` e
-`ai_api_keys`):
+seletor de modelo). As preferências são persistidas no Supabase:
 
 - **Geral** — 4 temas (Linear, Emerald, Amber, Crimson), todos derivados da mesma escala de
   superfícies escuras do `DESIGN.md`, trocando apenas o acento cromático. Aplicado
@@ -201,8 +201,15 @@ seletor de modelo). Duas seções, ambas persistidas no Supabase (`user_settings
 - **Inteligência Artificial** — chave de API por provedor (OpenAI, Gemini, Claude), com link
   para onde gerá-la, e seleção do modelo padrão entre os provedores configurados
   (`lib/aiProviders.ts` traz o catálogo de modelos atual de cada um).
+- **MCP** — cadastra servidores por presets SAP Docs (Streamable HTTP) e SAP ABAP (`stdio`),
+  permite editar/testar a conexão, ativar/desativar e vincular cada servidor a N agentes. Os
+  vínculos ficam em `mcp_agent_bindings`; credenciais SAP não são salvas no banco. O processo
+  principal do Electron hospeda os clientes MCP, pede autorização antes de iniciar um processo
+  local e confirma individualmente ferramentas que possam escrever/ativar/transportar dados.
+  No chat, o modelo seleciona e executa ferramentas MCP antes da resposta final; os retornos
+  entram como evidência junto do system prompt do agente e das skills roteadas.
 
-### Skills (funcional, ainda não conectada ao modelo)
+### Skills (funcional e conectada ao modelo)
 
 Acessada pelo atalho "Skills" na sidebar (`screens/SkillsScreen.tsx`), troca o conteúdo
 principal para uma grade com todas as skills que acompanham o repo em
@@ -215,8 +222,9 @@ no banco quando o usuário mexe no switch pela primeira vez (antes disso o padr�
 O botão "Importar skill" abre um modal (`components/ImportSkillModal.tsx`) para cadastrar uma
 skill própria: nome, descrição e upload de um arquivo `.md` (o conteúdo é lido no cliente e
 salvo em `user_skills.content_md`). Skills importadas aparecem na mesma grade, com um badge
-"Importada" e opção de remover. **Nada disso é enviado ao modelo ainda** — é só o catálogo e
-o controle de ativação; a integração no prompt/contexto do chat fica para uma próxima etapa.
+"Importada" e opção de remover. Na primeira mensagem do chat, o roteador escolhe até cinco
+skills habilitadas e injeta nome/descrição no system prompt; servidores MCP vinculados ao
+agente selecionado podem ser usados no mesmo ciclo.
 
 ### Agentes (funcional)
 
