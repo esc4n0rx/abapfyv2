@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -9,7 +9,12 @@ interface CodeBlockProps {
   code: string
 }
 
-export function CodeBlock({ language, code }: CodeBlockProps): JSX.Element {
+// O Markdown reprocessa a árvore inteira a cada delta da mensagem em
+// streaming — sem memo, todo bloco de código já finalizado re-rodaria o
+// highlight do Prism (não é barato) de novo a cada pedacinho de texto novo
+// que chega, mesmo sem ter mudado uma linha. Com memo, só o bloco que está
+// de fato crescendo (dentro da cerca ``` sendo digitada) recalcula.
+export const CodeBlock = memo(function CodeBlock({ language, code }: CodeBlockProps): JSX.Element {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy(): Promise<void> {
@@ -43,4 +48,4 @@ export function CodeBlock({ language, code }: CodeBlockProps): JSX.Element {
       </SyntaxHighlighter>
     </div>
   )
-}
+})

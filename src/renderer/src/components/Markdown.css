@@ -3,6 +3,8 @@
   font-size: 14px;
   line-height: 1.65;
   color: var(--color-ink-muted);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .markdown-body > *:first-child {

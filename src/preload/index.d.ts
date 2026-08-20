@@ -53,13 +53,50 @@ export interface McpToolInfo {
   requiresConfirmation: boolean
 }
 
+export interface McpResourceInfo {
+  serverId: string
+  serverName: string
+  uri: string
+  name: string
+  description: string | null
+  mimeType: string | null
+}
+
+export interface McpPromptInfo {
+  serverId: string
+  serverName: string
+  name: string
+  description: string | null
+}
+
+export interface McpConfirmationPending {
+  callId: string
+  kind: 'server' | 'tool'
+  serverName: string
+  toolName?: string
+  detail: string
+}
+
+export interface McpConfirmationResolved {
+  callId: string
+  approved: boolean
+}
+
 export interface McpApi {
   listTools: (configs: McpServerConfig[]) => Promise<McpToolInfo[]>
   callTool: (
     config: McpServerConfig,
     toolName: string,
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
+    callId?: string
   ) => Promise<unknown>
+  cancelTool: (callId: string) => void
+  respondConfirmation: (callId: string, approved: boolean) => Promise<void>
+  listResources: (configs: McpServerConfig[]) => Promise<McpResourceInfo[]>
+  readResource: (config: McpServerConfig, uri: string, callId?: string) => Promise<unknown>
+  listPrompts: (configs: McpServerConfig[]) => Promise<McpPromptInfo[]>
+  onConfirmationPending: (callback: (event: McpConfirmationPending) => void) => () => void
+  onConfirmationResolved: (callback: (event: McpConfirmationResolved) => void) => () => void
 }
 
 export interface Api {

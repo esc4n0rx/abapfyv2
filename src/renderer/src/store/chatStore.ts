@@ -33,12 +33,20 @@ export interface ChatMeta {
   skillIds: string[]
 }
 
+export interface PersistedToolActivity {
+  id: string
+  label: string
+  kind: 'skill' | 'mcp'
+  status: 'running' | 'confirm' | 'done' | 'error'
+}
+
 export interface PersistedMessage {
   role: 'user' | 'assistant'
   content: string
   tokensInput: number | null
   tokensOutput: number | null
   responseMs: number | null
+  toolActivity: PersistedToolActivity[] | null
   createdAt: string
 }
 
@@ -252,7 +260,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadChatMessages: async (chatId) => {
     const { data } = await supabase
       .from('chat_messages')
-      .select('role, content, tokens_input, tokens_output, response_ms, created_at')
+      .select('role, content, tokens_input, tokens_output, response_ms, tool_activity, created_at')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true })
 
@@ -262,6 +270,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       tokensInput: row.tokens_input,
       tokensOutput: row.tokens_output,
       responseMs: row.response_ms,
+      toolActivity: row.tool_activity ?? null,
       createdAt: row.created_at
     }))
   },
@@ -277,7 +286,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       content: message.content,
       tokens_input: message.tokensInput,
       tokens_output: message.tokensOutput,
-      response_ms: message.responseMs
+      response_ms: message.responseMs,
+      tool_activity: message.toolActivity
     })
 
     await get().touchChat(chatId)

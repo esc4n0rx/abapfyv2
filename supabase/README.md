@@ -56,6 +56,9 @@ Scripts SQL do projeto, aplicados via SQL Editor do Supabase ou pela CLI (`supab
     persistidas nessas tabelas.
 20. `rls/013_mcp_servers_rls.sql` — restringe servidores e vínculos MCP ao usuário dono e
     impede vincular um servidor pertencente a outra conta.
+21. `sql/014_chat_messages_tool_activity.sql` — adiciona `chat_messages.tool_activity`
+    (jsonb): snapshot final das badges de skill/ferramenta MCP usadas naquela resposta, pra
+    sobreviver ao reabrir o chat. Sem RLS extra (já coberta pela política de `005`).
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

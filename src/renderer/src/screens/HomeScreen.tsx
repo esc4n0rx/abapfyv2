@@ -1,4 +1,4 @@
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   ArrowUp,
@@ -17,7 +17,11 @@ import {
 import abapfyLogo from '@renderer/assets/logo.png'
 import { Sidebar } from '@renderer/components/Sidebar'
 import { SettingsModal } from '@renderer/components/SettingsModal/SettingsModal'
-import { ChatMessageItem, type UiMessage } from '@renderer/components/ChatMessageItem'
+import {
+  ChatMessageItem,
+  type ToolActivityItem,
+  type UiMessage
+} from '@renderer/components/ChatMessageItem'
 import { SkillsScreen } from '@renderer/screens/SkillsScreen'
 import { AgentsScreen } from '@renderer/screens/AgentsScreen'
 import { ProjectsScreen } from '@renderer/screens/ProjectsScreen'
@@ -32,6 +36,7 @@ import { fetchParametrosContextBlock } from '@renderer/store/estimativaParametro
 import { parseClarify } from '@renderer/lib/clarify'
 import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
 import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
+import { loadSkillContent } from '@renderer/lib/skillContent'
 import {
   CLAUDE_EFFORT_LABELS_PT,
   CLAUDE_EFFORT_LEVELS,
@@ -125,6 +130,17 @@ export function HomeScreen(): JSX.Element {
       projects: state.projects
     })
   )
+
+  // Referência estável pro handleSend usado pelas respostas de "esclarecimento"
+  // (ClarifyQuestion) dentro de cada ChatMessageItem — sem isso, a prop
+  // onClarifyAnswer seria uma função nova a cada render do HomeScreen (o que
+  // acontece a cada delta do streaming), derrubando o React.memo de
+  // ChatMessageItem pra TODAS as mensagens, não só a que está gerando.
+  const handleSendRef = useRef<(overrideText?: string) => Promise<void>>()
+  const handleClarifyAnswer = useCallback((text: string) => {
+    void handleSendRef.current?.(text)
+  }, [])
+  handleSendRef.current = handleSend
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent): void {
@@ -221,7 +237,8 @@ export function HomeScreen(): JSX.Element {
           elapsedMs: row.responseMs ?? undefined,
           agentName: row.role === 'assistant' ? (meta?.agentName ?? undefined) : undefined,
           providerLabel: row.role === 'assistant' ? providerName : undefined,
-          modelLabel: row.role === 'assistant' ? (meta?.model ?? undefined) : undefined
+          modelLabel: row.role === 'assistant' ? (meta?.model ?? undefined) : undefined,
+          toolActivity: row.toolActivity ?? undefined
         }))
       )
     }
@@ -345,10 +362,18 @@ export function HomeScreen(): JSX.Element {
           const routedSkills = enabledSkills.filter((skill) => route.skillIds.includes(skill.slug))
           if (routedAgent && routedSkills.length > 0) {
             skillIds = routedSkills.map((skill) => skill.slug)
+            const skillContents = await Promise.all(routedSkills.map(loadSkillContent))
             const skillsBlock = routedSkills
-              .map((skill) => `- **${skill.name}**: ${skill.description}`)
-              .join('\n')
-            prompt = `${prompt}\n\n---\n\n## Skills disponíveis para esta sessão\n\nAs skills abaixo foram identificadas como relevantes para o pedido do usuário — use o conhecimento delas como referência adicional ao responder:\n\n${skillsBlock}`
+              .map((skill, index) => {
+                const content = skillContents[index]
+                const header = `### ${skill.name}\n${skill.description ?? ''}`
+                // Sem conteúdo carregado (skill importada sem markdown, ou
+                // SKILL.md não encontrado no bundle) cai pra nome+descrição —
+                // pior caso é o comportamento antigo, nunca fica sem nada.
+                return content ? `${header}\n\n${content}` : header
+              })
+              .join('\n\n---\n\n')
+            prompt = `${prompt}\n\n---\n\n## Skills disponíveis para esta sessão\n\nAs skills abaixo foram identificadas como relevantes para o pedido do usuário — use o conhecimento delas como referência ao responder:\n\n${skillsBlock}`
           }
         }
         setIsRouting(false)
@@ -401,10 +426,20 @@ export function HomeScreen(): JSX.Element {
       content: fullContent,
       tokensInput: null,
       tokensOutput: null,
-      responseMs: null
+      responseMs: null,
+      toolActivity: null
     })
 
     const assistantId = createId()
+    const toolActivity: ToolActivityItem[] = sessionSkillNames.map((name, index) => ({
+      id: `skill-${index}`,
+      label: name,
+      kind: 'skill',
+      status: 'done'
+    }))
+    const pushToolActivity = (): void => {
+      rt.updateMessage(chatId!, assistantId, { toolActivity: [...toolActivity] })
+    }
     rt.appendMessage(chatId, {
       id: assistantId,
       role: 'assistant',
@@ -413,7 +448,8 @@ export function HomeScreen(): JSX.Element {
       modelLabel: selectedModelDef?.label,
       effortLabel: defaultProvider === 'claude' ? CLAUDE_EFFORT_LABELS_PT[claudeEffort] : undefined,
       agentName: agent?.name,
-      streaming: true
+      streaming: true,
+      toolActivity: toolActivity.length > 0 ? [...toolActivity] : undefined
     })
     rt.setStreaming(chatId, true)
     rt.setStatus(chatId, 'idle')
@@ -422,6 +458,20 @@ export function HomeScreen(): JSX.Element {
     rt.setController(chatId, controller)
 
     let accumulated = ''
+    // O SSE de Claude/OpenAI/Gemini pode disparar dezenas de deltas por
+    // segundo — bem acima da taxa de repaint da tela. Atualizar o estado do
+    // React (e reprocessar o Markdown inteiro) a cada delta é o que faz a
+    // resposta parecer "travada"/poucos fps. Junta os deltas que chegam
+    // dentro do mesmo frame num único setState via requestAnimationFrame, o
+    // texto continua chegando na mesma velocidade, só o repaint é agrupado.
+    let renderFrame: number | null = null
+    const flushContent = (): void => {
+      if (renderFrame !== null) {
+        cancelAnimationFrame(renderFrame)
+        renderFrame = null
+      }
+      rt.updateMessage(chatId, assistantId, { content: accumulated })
+    }
     let totalInputTokens = 0
     let totalOutputTokens = 0
     let iterationHistory = history
@@ -442,7 +492,14 @@ export function HomeScreen(): JSX.Element {
               messages: history,
               systemPrompt: prompt ?? undefined,
               servers: mcpServers,
-              signal: controller.signal
+              signal: controller.signal,
+              onToolEvent: (event) => {
+                const label = `${event.serverName} · ${event.toolName}`
+                const existing = toolActivity.find((item) => item.id === event.id)
+                if (existing) existing.status = event.status
+                else toolActivity.push({ id: event.id, label, kind: 'mcp', status: event.status })
+                pushToolActivity()
+              }
             })
             if (mcpEvidence) runtimePrompt = `${prompt ?? ''}\n\n---\n\n${mcpEvidence}`
           } catch (mcpError) {
@@ -470,12 +527,21 @@ export function HomeScreen(): JSX.Element {
           claudeEffort: defaultProvider === 'claude' ? claudeEffort : undefined,
           onDelta: (delta) => {
             accumulated += delta
-            rt.updateMessage(chatId, assistantId, { content: accumulated })
+            if (renderFrame === null) {
+              renderFrame = requestAnimationFrame(() => {
+                renderFrame = null
+                rt.updateMessage(chatId, assistantId, { content: accumulated })
+              })
+            }
           },
           onFinish: (info) => {
             finishInfo = info
           }
         })
+
+        // Fecha o frame pendente no fim de cada iteração — sem isso, "Continuando
+        // automaticamente…" pode aparecer um frame antes do texto que já chegou.
+        flushContent()
 
         totalInputTokens += finishInfo.inputTokens ?? 0
         totalOutputTokens += finishInfo.outputTokens ?? 0
@@ -495,8 +561,18 @@ export function HomeScreen(): JSX.Element {
         rt.updateMessage(chatId, assistantId, { error: (error as Error).message })
       }
     } finally {
+      // Cancela qualquer frame pendente e garante que o texto final exibido
+      // é o `accumulated` completo — sem isso, um requestAnimationFrame que
+      // não chegou a rodar (ex.: janela em segundo plano, onde o Electron
+      // pausa rAF) deixaria a bolha visualmente atrás do que já foi de fato
+      // gerado e persistido.
+      if (renderFrame !== null) {
+        cancelAnimationFrame(renderFrame)
+        renderFrame = null
+      }
       const elapsedMs = performance.now() - startTime
       rt.updateMessage(chatId, assistantId, {
+        content: accumulated,
         streaming: false,
         continuing: undefined,
         elapsedMs,
@@ -513,7 +589,8 @@ export function HomeScreen(): JSX.Element {
           content: accumulated,
           tokensInput: totalInputTokens || null,
           tokensOutput: totalOutputTokens || null,
-          responseMs: Math.round(elapsedMs)
+          responseMs: Math.round(elapsedMs),
+          toolActivity: toolActivity.length > 0 ? toolActivity : null
         })
       }
     }
@@ -592,7 +669,7 @@ export function HomeScreen(): JSX.Element {
                   <ChatMessageItem
                     key={message.id}
                     message={message}
-                    onClarifyAnswer={(text) => handleSend(text)}
+                    onClarifyAnswer={handleClarifyAnswer}
                     clarifyDisabled={isStreaming}
                   />
                 ))}

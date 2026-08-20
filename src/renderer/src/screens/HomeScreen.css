@@ -478,6 +478,22 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Toca uma vez só na montagem (key estável por message.id + memo em
+     ChatMessageItem garantem que o elemento não remonta a cada delta do
+     streaming) — dá o "chega uma mensagem nova" sem custo nenhum durante a
+     geração em si. */
+  animation: chat-message-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes chat-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .chat-message-user {
@@ -503,6 +519,8 @@
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .chat-message-attachments {
@@ -587,6 +605,79 @@
 
 .chat-message-continuing-icon {
   animation: chat-continuing-spin 1200ms linear infinite;
+}
+
+.chat-tool-activity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-xs);
+}
+
+.chat-tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-2);
+  color: var(--color-ink-tertiary);
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0;
+  animation: chat-tool-badge-in 220ms ease forwards;
+}
+
+.chat-tool-badge-running {
+  color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  background: color-mix(in srgb, var(--color-primary-hover) 10%, var(--color-surface-2));
+}
+
+.chat-tool-badge-done {
+  color: var(--color-ink-subtle);
+}
+
+.chat-tool-badge-error {
+  color: var(--color-semantic-danger);
+  border-color: var(--color-semantic-danger);
+}
+
+.chat-tool-badge-confirm {
+  color: var(--color-semantic-warning, #b8860b);
+  border-color: var(--color-semantic-warning, #b8860b);
+  background: color-mix(in srgb, var(--color-semantic-warning, #b8860b) 12%, var(--color-surface-2));
+}
+
+.chat-tool-badge-spin {
+  animation: chat-continuing-spin 900ms linear infinite;
+}
+
+.chat-tool-badge-pulse {
+  animation: chat-tool-badge-pulse 1100ms ease-in-out infinite;
+}
+
+@keyframes chat-tool-badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes chat-tool-badge-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .chat-message-stats {

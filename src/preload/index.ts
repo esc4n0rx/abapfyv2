@@ -67,10 +67,42 @@ const updates = {
   }
 }
 
+interface McpConfirmationPending {
+  callId: string
+  kind: 'server' | 'tool'
+  serverName: string
+  toolName?: string
+  detail: string
+}
+
+interface McpConfirmationResolved {
+  callId: string
+  approved: boolean
+}
+
 const mcp = {
   listTools: (configs: unknown[]) => ipcRenderer.invoke('mcp:listTools', configs),
-  callTool: (config: unknown, toolName: string, args: Record<string, unknown>) =>
-    ipcRenderer.invoke('mcp:callTool', config, toolName, args)
+  callTool: (config: unknown, toolName: string, args: Record<string, unknown>, callId?: string) =>
+    ipcRenderer.invoke('mcp:callTool', config, toolName, args, callId),
+  cancelTool: (callId: string) => ipcRenderer.send('mcp:cancelTool', callId),
+  respondConfirmation: (callId: string, approved: boolean) =>
+    ipcRenderer.invoke('mcp:confirmationResponse', { callId, approved }),
+  listResources: (configs: unknown[]) => ipcRenderer.invoke('mcp:listResources', configs),
+  readResource: (config: unknown, uri: string, callId?: string) =>
+    ipcRenderer.invoke('mcp:readResource', config, uri, callId),
+  listPrompts: (configs: unknown[]) => ipcRenderer.invoke('mcp:listPrompts', configs),
+  onConfirmationPending: (callback: (event: McpConfirmationPending) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: McpConfirmationPending): void =>
+      callback(payload)
+    ipcRenderer.on('mcp:confirmation-pending', listener)
+    return () => ipcRenderer.removeListener('mcp:confirmation-pending', listener)
+  },
+  onConfirmationResolved: (callback: (event: McpConfirmationResolved) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: McpConfirmationResolved): void =>
+      callback(payload)
+    ipcRenderer.on('mcp:confirmation-resolved', listener)
+    return () => ipcRenderer.removeListener('mcp:confirmation-resolved', listener)
+  }
 }
 
 const api = {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { TitleBar } from '@renderer/components/TitleBar'
+import { McpConfirmationBanner } from '@renderer/components/McpConfirmationBanner'
 import { SplashScreen } from '@renderer/screens/SplashScreen'
 import { AuthScreen } from '@renderer/screens/AuthScreen'
 import { HomeScreen } from '@renderer/screens/HomeScreen'
@@ -74,6 +75,7 @@ function App(): JSX.Element {
   return (
     <div className="app-shell">
       <TitleBar />
+      <McpConfirmationBanner />
       <div className="app-content">
         <Routes>
           <Route path="/" element={<SplashScreen />} />

@@ -40,6 +40,9 @@ supabase/
   rls/            políticas de Row Level Security
 resources/        ícones e assets embutidos no app
 build/             recursos usados pelo electron-builder ao empacotar
+external/         Abapfy Admin — dashboard web (Next.js + Material UI) separado, ver
+                  external/README.md. Mesmo projeto Supabase, tabelas novas próprias
+                  (admin_users, model_pricing...), instala/roda independente do app desktop.
 ```
 
 ## Janela
@@ -204,10 +207,33 @@ seletor de modelo). As preferências são persistidas no Supabase:
 - **MCP** — cadastra servidores por presets SAP Docs (Streamable HTTP) e SAP ABAP (`stdio`),
   permite editar/testar a conexão, ativar/desativar e vincular cada servidor a N agentes. Os
   vínculos ficam em `mcp_agent_bindings`; credenciais SAP não são salvas no banco. O processo
-  principal do Electron hospeda os clientes MCP, pede autorização antes de iniciar um processo
-  local e confirma individualmente ferramentas que possam escrever/ativar/transportar dados.
-  No chat, o modelo seleciona e executa ferramentas MCP antes da resposta final; os retornos
-  entram como evidência junto do system prompt do agente e das skills roteadas.
+  principal do Electron hospeda os clientes MCP (`main/mcp.ts`), confirma individualmente
+  ferramentas que possam escrever/ativar/transportar dados e expõe, além de `tools/*`, os
+  protocolos `resources/*` e `prompts/list` do MCP — recursos viram uma ferramenta sintética
+  `read_resource` por servidor (URI + catálogo na descrição), pro modelo ler mesmo servidores
+  que só publicam recursos, não tools. No chat, o modelo seleciona e executa ferramentas MCP
+  antes da resposta final; os retornos entram como evidência junto do system prompt do agente
+  e das skills roteadas.
+
+  **Confirmação in-app, não dialog nativo** — em vez de `dialog.showMessageBox` (modal do SO,
+  trava a IPC e pode abrir fora do foco da janela), a autorização vira um card não-bloqueante
+  em `components/McpConfirmationBanner.tsx` (fila em `store/mcpConfirmStore.ts`), visível em
+  cima de qualquer tela. O main manda o pedido via `mcp:confirmation-pending` e fica com uma
+  promise pendente até o clique voltar por `mcp:confirmationResponse`.
+
+  **Timeout, cancelamento e retry** — `connect`/`tools/list`/`tools/call`/`resources/read` têm
+  timeout (20s conexão, 45s chamada); ao estourar, o cliente do servidor é descartado do cache
+  em vez de repetir o mesmo travamento na próxima chamada. Clicar "parar" no chat aborta de
+  verdade uma ferramenta em andamento (`AbortSignal` propagado até o `client.request` no main
+  via `mcp:cancelTool`), não só o streaming de texto. Falha de rede/timeout tenta de novo uma
+  vez com um backoff curto antes de cair no fallback textual — recusa explícita do usuário
+  nunca é retentada.
+
+  **Badge de atividade ao vivo** — cada skill/ferramenta usada na resposta vira uma badge
+  animada (`ChatMessageItem.tsx`, estilo Claude Code): `running` (spinner) → `confirm`
+  (piscando, esperando o card acima) → `done`/`error`. O snapshot final fica em
+  `chat_messages.tool_activity` (jsonb, `sql/014_chat_messages_tool_activity.sql`), então
+  reabrir um chat salvo mostra quais ferramentas rodaram naquela resposta específica.
 
 ### Skills (funcional e conectada ao modelo)
 
@@ -223,8 +249,12 @@ O botão "Importar skill" abre um modal (`components/ImportSkillModal.tsx`) para
 skill própria: nome, descrição e upload de um arquivo `.md` (o conteúdo é lido no cliente e
 salvo em `user_skills.content_md`). Skills importadas aparecem na mesma grade, com um badge
 "Importada" e opção de remover. Na primeira mensagem do chat, o roteador escolhe até cinco
-skills habilitadas e injeta nome/descrição no system prompt; servidores MCP vinculados ao
-agente selecionado podem ser usados no mesmo ciclo.
+skills habilitadas e injeta no system prompt o **conteúdo completo** de cada uma — não só
+nome/descrição — carregado sob demanda em `lib/skillContent.ts`: built-in lê o `SKILL.md`
+correspondente do bundle (`import.meta.glob` lazy, um chunk JS por skill — as 32 não entram no
+bundle de startup, só as até cinco roteadas naquela mensagem), importada usa `content_md`
+direto; cada skill é truncada em 8.000 caracteres pra não estourar contexto com várias skills
+de uma vez. Servidores MCP vinculados ao agente selecionado podem ser usados no mesmo ciclo.
 
 ### Agentes (funcional)
 

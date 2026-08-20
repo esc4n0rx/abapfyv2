@@ -22,6 +22,22 @@ export interface McpToolInfo {
   requiresConfirmation: boolean
 }
 
+export interface McpResourceInfo {
+  serverId: string
+  serverName: string
+  uri: string
+  name: string
+  description: string | null
+  mimeType: string | null
+}
+
+export interface McpPromptInfo {
+  serverId: string
+  serverName: string
+  name: string
+  description: string | null
+}
+
 interface ConnectedServer {
   signature: string
   client: Client
@@ -29,11 +45,37 @@ interface ConnectedServer {
 
 const clients = new Map<string, ConnectedServer>()
 const toolConfirmations = new Map<string, boolean>()
+// Chamadas em andamento (tools/call ou resources/read) indexadas pelo callId
+// gerado no renderer — permite cancelar de verdade quando o usuário aborta a
+// resposta no meio de uma ferramenta MCP, em vez de deixar rodando até o timeout.
+const pendingCalls = new Map<string, AbortController>()
 const SAFE_STDIO_COMMANDS = new Set(['node', 'node.exe', 'npx', 'npx.cmd'])
 const WRITE_TOOL_PATTERN =
   /(^|_)(create|update|delete|remove|write|edit|activate|release|transport|import|deploy|execute|run|apply|commit|push|generate|refactor|rename|move|lock|unlock)(_|$)/i
 const READ_TOOL_PATTERN =
   /(^|_)(search|fetch|get|list|read|find|inspect|describe|status|health|validate|check|compare|analyze|query|discover|lookup|details|matrix|diff|service)(_|$)/i
+
+const CONNECT_TIMEOUT_MS = 20_000
+const CALL_TIMEOUT_MS = 45_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Tempo esgotado (${Math.round(ms / 1000)}s) aguardando ${label}. O servidor MCP pode estar travado ou inacessível.`)),
+      ms
+    )
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
 
 function signature(config: McpServerConfig): string {
   return JSON.stringify([config.transport, config.url, config.command, config.args])
@@ -76,7 +118,7 @@ async function connect(config: McpServerConfig): Promise<Client> {
           stderr: 'pipe'
         })
 
-  await client.connect(transport)
+  await withTimeout(client.connect(transport), CONNECT_TIMEOUT_MS, `conexão com ${config.name}`)
   clients.set(config.id, { signature: nextSignature, client })
   return client
 }
@@ -103,7 +145,7 @@ export async function listMcpTools(configs: McpServerConfig[]): Promise<McpToolI
   const results = await Promise.allSettled(
     configs.map(async (config) => {
       const client = await connect(config)
-      const response = await client.listTools()
+      const response = await withTimeout(client.listTools(), CALL_TIMEOUT_MS, `lista de ferramentas de ${config.name}`)
       return response.tools.map((tool) => {
         const confirmation = requiresConfirmation(tool)
         toolConfirmations.set(`${config.id}:${tool.name}`, confirmation)
@@ -134,10 +176,43 @@ export function mcpToolRequiresConfirmation(serverId: string, toolName: string):
   return toolConfirmations.get(`${serverId}:${toolName}`) ?? true
 }
 
+// Aborta uma chamada MCP em andamento (tools/call ou resources/read) pelo
+// callId que o renderer gerou. Chamado quando o usuário clica "parar" no chat
+// no meio de uma ferramenta ainda rodando.
+export function cancelMcpCall(callId: string): void {
+  pendingCalls.get(callId)?.abort(new Error('Chamada MCP cancelada pelo usuário.'))
+}
+
+async function withCall<T>(
+  config: McpServerConfig,
+  client: Client,
+  callId: string | undefined,
+  run: (options: { timeout: number; signal: AbortSignal }) => Promise<T>
+): Promise<T> {
+  const controller = new AbortController()
+  if (callId) pendingCalls.set(callId, controller)
+  try {
+    return await run({ timeout: CALL_TIMEOUT_MS, signal: controller.signal })
+  } catch (error) {
+    // Um servidor que travou/estourou o prazo fica com o cliente num estado
+    // indefinido — descarta do cache para a próxima chamada reconectar do
+    // zero, em vez de repetir o mesmo travamento silenciosamente sempre.
+    const cached = clients.get(config.id)
+    if (cached?.client === client) {
+      clients.delete(config.id)
+      void cached.client.close().catch(() => undefined)
+    }
+    throw error
+  } finally {
+    if (callId) pendingCalls.delete(callId)
+  }
+}
+
 export async function callMcpTool(
   config: McpServerConfig,
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  callId?: string
 ): Promise<unknown> {
   const client = await connect(config)
   // Alguns servidores (incluindo versões do SAP Docs) retornam conteúdo textual
@@ -145,14 +220,71 @@ export async function callMcpTool(
   // Client.callTool() rejeita a resposta inteira nesse caso. A chamada request()
   // continua validando o envelope MCP, preserva o retorno original e, sobretudo,
   // evita repetir a execução de uma ferramenta que pode ter efeitos colaterais.
-  return client.request(
-    { method: 'tools/call', params: { name: toolName, arguments: args } },
-    CompatibilityCallToolResultSchema
+  return withCall(config, client, callId, (options) =>
+    client.request(
+      { method: 'tools/call', params: { name: toolName, arguments: args } },
+      CompatibilityCallToolResultSchema,
+      options
+    )
   )
+}
+
+export async function listMcpResources(configs: McpServerConfig[]): Promise<McpResourceInfo[]> {
+  const results = await Promise.allSettled(
+    configs.map(async (config) => {
+      const client = await connect(config)
+      // Nem todo servidor implementa `resources/list` — trata como "sem
+      // recursos" em vez de derrubar o loop inteiro por causa de um server
+      // que só oferece tools.
+      const response = await client
+        .listResources(undefined, { timeout: CALL_TIMEOUT_MS })
+        .catch(() => ({ resources: [] }))
+      return response.resources.map((resource) => ({
+        serverId: config.id,
+        serverName: config.name,
+        uri: resource.uri,
+        name: resource.name ?? resource.uri,
+        description: resource.description ?? null,
+        mimeType: resource.mimeType ?? null
+      }))
+    })
+  )
+  return results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+}
+
+export async function readMcpResource(
+  config: McpServerConfig,
+  uri: string,
+  callId?: string
+): Promise<unknown> {
+  const client = await connect(config)
+  return withCall(config, client, callId, (options) =>
+    client.readResource({ uri }, options)
+  )
+}
+
+export async function listMcpPrompts(configs: McpServerConfig[]): Promise<McpPromptInfo[]> {
+  const results = await Promise.allSettled(
+    configs.map(async (config) => {
+      const client = await connect(config)
+      const response = await client
+        .listPrompts(undefined, { timeout: CALL_TIMEOUT_MS })
+        .catch(() => ({ prompts: [] }))
+      return response.prompts.map((prompt) => ({
+        serverId: config.id,
+        serverName: config.name,
+        name: prompt.name,
+        description: prompt.description ?? null
+      }))
+    })
+  )
+  return results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
 }
 
 export async function closeMcpClients(): Promise<void> {
   await Promise.allSettled([...clients.values()].map(({ client }) => client.close()))
   clients.clear()
   toolConfirmations.clear()
+  pendingCalls.forEach((controller) => controller.abort(new Error('Aplicativo fechando.')))
+  pendingCalls.clear()
 }

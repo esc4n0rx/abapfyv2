@@ -1,4 +1,5 @@
-import { Bot, FileText, RefreshCw } from 'lucide-react'
+import { memo } from 'react'
+import { AlertCircle, Bot, CheckCircle2, FileText, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { Markdown } from './Markdown'
 import { EfDocxGenerator } from './EfDocxGenerator'
 import { StructuredJson } from './StructuredJson'
@@ -10,6 +11,13 @@ import { parseEfDocxData } from '@renderer/lib/efDocx'
 import { parseStructuredJson, extractSoleJsonBlock } from '@renderer/lib/structuredResponse'
 import { parseEstimateData } from '@renderer/lib/estimateCards'
 import { parseClarify } from '@renderer/lib/clarify'
+
+export interface ToolActivityItem {
+  id: string
+  label: string
+  kind: 'skill' | 'mcp'
+  status: 'running' | 'confirm' | 'done' | 'error'
+}
 
 export interface UiMessage {
   id: string
@@ -25,6 +33,28 @@ export interface UiMessage {
   tokensInput?: number | null
   tokensOutput?: number | null
   error?: string
+  toolActivity?: ToolActivityItem[]
+}
+
+function ToolActivityBadges({ items }: { items: ToolActivityItem[] }): JSX.Element {
+  return (
+    <div className="chat-tool-activity">
+      {items.map((item) => (
+        <span key={item.id} className={`chat-tool-badge chat-tool-badge-${item.status}`}>
+          {item.status === 'running' ? (
+            <Loader2 size={11} strokeWidth={2} className="chat-tool-badge-spin" />
+          ) : item.status === 'confirm' ? (
+            <AlertCircle size={11} strokeWidth={2} className="chat-tool-badge-pulse" />
+          ) : item.status === 'error' ? (
+            <XCircle size={11} strokeWidth={2} />
+          ) : (
+            <CheckCircle2 size={11} strokeWidth={2} />
+          )}
+          {item.status === 'confirm' ? `${item.label} · aguardando autorização` : item.label}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 interface ChatMessageItemProps {
@@ -33,7 +63,13 @@ interface ChatMessageItemProps {
   clarifyDisabled?: boolean
 }
 
-export function ChatMessageItem({
+// Sem memo, toda mensagem do histórico re-renderiza (e o Markdown de cada
+// uma reprocessa o conteúdo inteiro) a cada delta da mensagem que está
+// gerando — o setState de streaming troca a referência do array de
+// mensagens inteiro. Com memo + `onClarifyAnswer` estabilizado no chamador
+// (ver handleClarifyAnswer em HomeScreen.tsx), só a mensagem cujo `message`
+// prop realmente mudou re-renderiza.
+export const ChatMessageItem = memo(function ChatMessageItem({
   message,
   onClarifyAnswer,
   clarifyDisabled
@@ -94,6 +130,7 @@ export function ChatMessageItem({
         </div>
       ) : (
         <div className="chat-message-assistant-content">
+          {!!message.toolActivity?.length && <ToolActivityBadges items={message.toolActivity} />}
           {clarify ? (
             <ClarifyQuestion
               question={clarify.question}
@@ -139,4 +176,4 @@ export function ChatMessageItem({
       {message.error && <p className="chat-message-error">{message.error}</p>}
     </div>
   )
-}
+})

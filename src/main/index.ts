@@ -1,13 +1,17 @@
-import { app, shell, BrowserWindow, dialog, ipcMain, type MessageBoxOptions } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupAutoUpdater } from './updater'
 import {
   callMcpTool,
+  cancelMcpCall,
   closeMcpClients,
+  listMcpPrompts,
+  listMcpResources,
   listMcpTools,
   mcpToolRequiresConfirmation,
+  readMcpResource,
   type McpServerConfig
 } from './mcp'
 
@@ -81,52 +85,119 @@ function registerWindowControlIpc(): void {
   })
 }
 
+// Dialog nativo (dialog.showMessageBox) é modal do SO: trava a IPC inteira
+// esperando clique e, se a janela estiver minimizada/fora de foco quando abre,
+// fica escondido atrás de outras janelas — o app parece travado sem motivo
+// aparente. Em vez disso, a confirmação vira um card dentro do próprio chat
+// (McpConfirmationBanner no renderer): manda um evento pro renderer e guarda
+// um resolver pendente, respondido de volta via IPC quando o usuário decide.
+// Ainda traz a janela pra frente, só como reforço visual — não é mais o que
+// bloqueia a decisão.
+function surfaceMainWindow(): void {
+  if (!mainWindow) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  if (!mainWindow.isVisible()) mainWindow.show()
+  mainWindow.focus()
+}
+
+interface McpConfirmationRequest {
+  callId: string
+  kind: 'server' | 'tool'
+  serverName: string
+  toolName?: string
+  detail: string
+}
+
+const pendingConfirmations = new Map<string, (approved: boolean) => void>()
+
+function requestMcpConfirmation(request: McpConfirmationRequest): Promise<boolean> {
+  surfaceMainWindow()
+  if (!mainWindow) return Promise.resolve(false)
+  return new Promise<boolean>((resolve) => {
+    pendingConfirmations.set(request.callId, resolve)
+    mainWindow?.webContents.send('mcp:confirmation-pending', request)
+  })
+}
+
+function resolveMcpConfirmation(callId: string, approved: boolean): void {
+  const resolve = pendingConfirmations.get(callId)
+  if (!resolve) return
+  pendingConfirmations.delete(callId)
+  resolve(approved)
+  mainWindow?.webContents.send('mcp:confirmation-resolved', { callId, approved })
+}
+
 function registerMcpIpc(): void {
+  ipcMain.handle(
+    'mcp:confirmationResponse',
+    (_event, payload: { callId: string; approved: boolean }) => {
+      resolveMcpConfirmation(payload.callId, payload.approved)
+    }
+  )
+
+  ipcMain.on('mcp:cancelTool', (_event, callId: string) => {
+    cancelMcpCall(callId)
+    // Se ainda estava esperando o clique do usuário no card de confirmação,
+    // resolve como recusado — sem isso o card fica órfão na tela depois que a
+    // resposta já foi abortada.
+    resolveMcpConfirmation(callId, false)
+  })
+
   ipcMain.handle('mcp:listTools', async (_event, configs: McpServerConfig[]) => {
     for (const config of configs.filter((item) => item.transport === 'stdio')) {
       const approvalKey = JSON.stringify([config.id, config.command, config.args])
       if (approvedStdioConfigs.has(approvalKey)) continue
-      const options: MessageBoxOptions = {
-        type: 'warning',
-        buttons: ['Cancelar', 'Iniciar servidor'],
-        defaultId: 0,
-        cancelId: 0,
-        title: 'Iniciar servidor MCP local',
-        message: `O Abapfy precisa iniciar o servidor local ${config.name}.`,
-        detail: `Executável: ${config.command ?? ''}\nArgumentos: ${config.args.join(' ')}\n\nConfirme apenas se reconhece esta configuração. A autorização vale até fechar o aplicativo.`,
-        noLink: true
-      }
-      const answer = mainWindow
-        ? await dialog.showMessageBox(mainWindow, options)
-        : await dialog.showMessageBox(options)
-      if (answer.response !== 1) throw new Error(`Inicialização de ${config.name} cancelada.`)
+      const callId = `server-${config.id}-${Date.now()}`
+      const approved = await requestMcpConfirmation({
+        callId,
+        kind: 'server',
+        serverName: config.name,
+        detail: `Executável: ${config.command ?? ''}\nArgumentos: ${config.args.join(' ')}\n\nConfirme apenas se reconhece esta configuração. A autorização vale até fechar o aplicativo.`
+      })
+      if (!approved) throw new Error(`Inicialização de ${config.name} cancelada.`)
       approvedStdioConfigs.add(approvalKey)
     }
     return listMcpTools(configs)
   })
+
   ipcMain.handle(
     'mcp:callTool',
-    async (_event, config: McpServerConfig, toolName: string, args: Record<string, unknown>) => {
+    async (
+      _event,
+      config: McpServerConfig,
+      toolName: string,
+      args: Record<string, unknown>,
+      callId?: string
+    ) => {
       if (mcpToolRequiresConfirmation(config.id, toolName)) {
-        const options: MessageBoxOptions = {
-          type: 'warning',
-          buttons: ['Cancelar', 'Autorizar uma vez'],
-          defaultId: 0,
-          cancelId: 0,
-          title: 'Autorizar ferramenta MCP',
-          message: `${config.name} solicita a ferramenta ${toolName}.`,
-          detail: `Esta ferramenta pode alterar dados. Confira o servidor/perfil e os argumentos antes de autorizar.\n\nConfiguração: ${config.command ?? config.url ?? ''} ${config.args.join(' ')}\n\nArgumentos: ${JSON.stringify(args, null, 2)}`,
-          noLink: true
-        }
-        const answer = mainWindow
-          ? await dialog.showMessageBox(mainWindow, options)
-          : await dialog.showMessageBox(options)
-        if (answer.response !== 1) {
+        const resolvedCallId = callId ?? `${config.id}-${toolName}-${Date.now()}`
+        const approved = await requestMcpConfirmation({
+          callId: resolvedCallId,
+          kind: 'tool',
+          serverName: config.name,
+          toolName,
+          detail: `Esta ferramenta pode alterar dados. Confira o servidor/perfil e os argumentos antes de autorizar.\n\nConfiguração: ${config.command ?? config.url ?? ''} ${config.args.join(' ')}\n\nArgumentos: ${JSON.stringify(args, null, 2)}`
+        })
+        if (!approved) {
           return { isError: true, error: 'Chamada MCP recusada pelo usuário.' }
         }
       }
-      return callMcpTool(config, toolName, args)
+      return callMcpTool(config, toolName, args, callId)
     }
+  )
+
+  ipcMain.handle('mcp:listResources', (_event, configs: McpServerConfig[]) =>
+    listMcpResources(configs)
+  )
+
+  ipcMain.handle(
+    'mcp:readResource',
+    (_event, config: McpServerConfig, uri: string, callId?: string) =>
+      readMcpResource(config, uri, callId)
+  )
+
+  ipcMain.handle('mcp:listPrompts', (_event, configs: McpServerConfig[]) =>
+    listMcpPrompts(configs)
   )
 }
 

@@ -19,6 +19,18 @@ interface McpToolInfo {
   description: string
   inputSchema: Record<string, unknown>
   requiresConfirmation: boolean
+  // Ferramenta sintética gerada aqui (não vem do servidor) que despacha pra
+  // `mcp:readResource` em vez de `mcp:callTool` — ver buildResourceTools().
+  isResourceReader?: boolean
+}
+
+type McpResourceInfo = Awaited<ReturnType<typeof window.api.mcp.listResources>>[number]
+
+export interface McpToolEvent {
+  id: string
+  serverName: string
+  toolName: string
+  status: 'running' | 'confirm' | 'done' | 'error'
 }
 
 interface RunMcpArgs {
@@ -29,6 +41,7 @@ interface RunMcpArgs {
   systemPrompt?: string
   servers: McpServerItem[]
   signal: AbortSignal
+  onToolEvent?: (event: McpToolEvent) => void
 }
 
 interface ToolExecution {
@@ -50,12 +63,120 @@ function safeJson(value: unknown): string {
   return output.length > MAX_RESULT_CHARS ? `${output.slice(0, MAX_RESULT_CHARS)}…` : output
 }
 
-async function executeTool(tools: McpToolInfo[], configs: McpServerConfig[], qualifiedName: string, args: Record<string, unknown>): Promise<ToolExecution> {
+let toolEventSeq = 0
+const TOOL_RETRY_ATTEMPTS = 1
+const TOOL_RETRY_DELAY_MS = 900
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// Servidor MCP resolve URL/spawn de novo a cada tentativa; um hiccup de rede
+// (DNS, conexão recusada, timeout do transporte) não deveria derrubar o loop
+// inteiro e cair no fallback textual "Falha MCP nesta interação" — vale uma
+// segunda tentativa curta antes de desistir. Recusa do usuário (dialog/card)
+// não passa por aqui: isso volta como resultado normal com isError, não como
+// exceção, então nunca é retentado.
+async function callWithRetry(run: () => Promise<unknown>): Promise<unknown> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= TOOL_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await run()
+    } catch (error) {
+      lastError = error
+      if (attempt < TOOL_RETRY_ATTEMPTS) await delay(TOOL_RETRY_DELAY_MS)
+    }
+  }
+  throw lastError
+}
+
+async function executeTool(
+  tools: McpToolInfo[],
+  configs: McpServerConfig[],
+  qualifiedName: string,
+  args: Record<string, unknown>,
+  signal: AbortSignal,
+  onToolEvent?: (event: McpToolEvent) => void
+): Promise<ToolExecution> {
   const tool = tools.find((item) => item.qualifiedName === qualifiedName)
   if (!tool) throw new Error(`Ferramenta MCP desconhecida: ${qualifiedName}`)
   const config = configs.find((item) => item.id === tool.serverId)
   if (!config) throw new Error(`Configuração MCP não encontrada para ${tool.serverName}.`)
-  return { tool, args, result: await window.api.mcp.callTool(config, tool.name, args) }
+  toolEventSeq += 1
+  const eventId = `mcp-${toolEventSeq}`
+  onToolEvent?.({ id: eventId, serverName: tool.serverName, toolName: tool.name, status: 'running' })
+
+  // Ferramentas que exigem autorização mostram um card no chat (não mais um
+  // dialog nativo — ver McpConfirmationBanner) antes de rodar. Sem isso a
+  // badge fica presa em "executando" sem explicar que o app está esperando um
+  // clique do usuário.
+  const unsubscribePending = window.api.mcp.onConfirmationPending((event) => {
+    if (event.callId !== eventId) return
+    onToolEvent?.({ id: eventId, serverName: tool.serverName, toolName: tool.name, status: 'confirm' })
+  })
+  const unsubscribeResolved = window.api.mcp.onConfirmationResolved((event) => {
+    if (event.callId !== eventId || !event.approved) return
+    onToolEvent?.({ id: eventId, serverName: tool.serverName, toolName: tool.name, status: 'running' })
+  })
+  // Parar a resposta no meio de uma ferramenta MCP em andamento cancela de
+  // verdade a chamada no main process (client.request com AbortSignal), em
+  // vez de só cancelar o streaming de texto e deixar a ferramenta terminando
+  // sozinha em segundo plano até o timeout de 45s.
+  const onAbort = (): void => window.api.mcp.cancelTool(eventId)
+  signal.addEventListener('abort', onAbort)
+
+  try {
+    const result = await callWithRetry(() =>
+      tool.isResourceReader
+        ? window.api.mcp.readResource(config, String(args.uri ?? ''), eventId)
+        : window.api.mcp.callTool(config, tool.name, args, eventId)
+    )
+    onToolEvent?.({ id: eventId, serverName: tool.serverName, toolName: tool.name, status: 'done' })
+    return { tool, args, result }
+  } catch (error) {
+    onToolEvent?.({ id: eventId, serverName: tool.serverName, toolName: tool.name, status: 'error' })
+    throw error
+  } finally {
+    unsubscribePending()
+    unsubscribeResolved()
+    signal.removeEventListener('abort', onAbort)
+  }
+}
+
+// Expõe recursos MCP (protocolo `resources/*`, separado de `tools/*`) como
+// mais uma ferramenta de leitura pro modelo escolher — sem isso, servidores
+// que só publicam recursos (não tools) ficavam invisíveis pro harness.
+async function buildResourceTools(configs: McpServerConfig[]): Promise<McpToolInfo[]> {
+  const resources = await window.api.mcp.listResources(configs).catch(() => [] as McpResourceInfo[])
+  if (resources.length === 0) return []
+
+  const byServer = new Map<string, McpResourceInfo[]>()
+  for (const resource of resources) {
+    const list = byServer.get(resource.serverId) ?? []
+    list.push(resource)
+    byServer.set(resource.serverId, list)
+  }
+
+  return [...byServer.entries()].map(([serverId, list]) => {
+    const catalog = list
+      .slice(0, 30)
+      .map((r) => `- ${r.uri}${r.name && r.name !== r.uri ? ` (${r.name})` : ''}${r.description ? `: ${r.description}` : ''}`)
+      .join('\n')
+    return {
+      qualifiedName: `mcp_${serverId.slice(0, 8)}__read_resource`,
+      serverId,
+      serverName: list[0].serverName,
+      name: 'read_resource',
+      description: `Lê o conteúdo de um recurso MCP exposto por ${list[0].serverName} pela URI exata. Recursos disponíveis:\n${catalog}`,
+      inputSchema: {
+        type: 'object',
+        properties: { uri: { type: 'string', description: 'URI exata do recurso, como listada acima.' } },
+        required: ['uri']
+      },
+      requiresConfirmation: false,
+      isResourceReader: true
+    }
+  })
 }
 
 async function runOpenAi(args: RunMcpArgs, configs: McpServerConfig[], tools: McpToolInfo[]): Promise<ToolExecution[]> {
@@ -72,7 +193,7 @@ async function runOpenAi(args: RunMcpArgs, configs: McpServerConfig[], tools: Mc
     for (const call of calls) {
       const fn = call.function as { name?: string; arguments?: string } | undefined
       const callArgs = JSON.parse(fn?.arguments || '{}') as Record<string, unknown>
-      const execution = await executeTool(tools, configs, fn?.name ?? '', callArgs)
+      const execution = await executeTool(tools, configs, fn?.name ?? '', callArgs, args.signal, args.onToolEvent)
       executions.push(execution)
       messages.push({ role: 'tool', tool_call_id: call.id, content: safeJson(execution.result) })
     }
@@ -92,7 +213,7 @@ async function runClaude(args: RunMcpArgs, configs: McpServerConfig[], tools: Mc
     messages.push({ role: 'assistant', content: data.content })
     const results: Record<string, unknown>[] = []
     for (const call of calls) {
-      const execution = await executeTool(tools, configs, call.name, (call.input ?? {}) as Record<string, unknown>)
+      const execution = await executeTool(tools, configs, call.name, (call.input ?? {}) as Record<string, unknown>, args.signal, args.onToolEvent)
       executions.push(execution)
       results.push({ type: 'tool_result', tool_use_id: call.id, content: safeJson(execution.result), is_error: Boolean((execution.result as { isError?: boolean })?.isError) })
     }
@@ -116,7 +237,7 @@ async function runGemini(args: RunMcpArgs, configs: McpServerConfig[], tools: Mc
     const responseParts: Record<string, unknown>[] = []
     for (const part of calls) {
       const call = part.functionCall as { name: string; args?: Record<string, unknown> }
-      const execution = await executeTool(tools, configs, call.name, call.args ?? {})
+      const execution = await executeTool(tools, configs, call.name, call.args ?? {}, args.signal, args.onToolEvent)
       executions.push(execution)
       responseParts.push({ functionResponse: { name: call.name, response: { result: execution.result } } })
     }
@@ -128,7 +249,11 @@ async function runGemini(args: RunMcpArgs, configs: McpServerConfig[], tools: Mc
 export async function runMcpToolLoop(args: RunMcpArgs): Promise<string | null> {
   if (args.servers.length === 0) return null
   const configs = args.servers.map(asConfig)
-  const tools = await window.api.mcp.listTools(configs)
+  const [serverTools, resourceTools] = await Promise.all([
+    window.api.mcp.listTools(configs),
+    buildResourceTools(configs)
+  ])
+  const tools = [...serverTools, ...resourceTools]
   if (tools.length === 0) return null
   const executions = args.provider === 'openai' ? await runOpenAi(args, configs, tools) : args.provider === 'claude' ? await runClaude(args, configs, tools) : await runGemini(args, configs, tools)
   if (executions.length === 0) return null
