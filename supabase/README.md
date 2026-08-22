@@ -47,7 +47,7 @@ Scripts SQL do projeto, aplicados via SQL Editor do Supabase ou pela CLI (`supab
     tempo real pelo agente `effort_estimator` a cada novo chat (ver `HomeScreen.tsx` e
     `estimativaParametrosStore.ts`).
 16. `rls/010_estimativa_parametros_rls.sql` — RLS: CRUD restrito ao dono (`auth.uid() =
-    user_id`) nas duas tabelas acima.
+user_id`) nas duas tabelas acima.
 17. `sql/011_chats_archive.sql` — adiciona arquivamento de conversas por usuário.
 18. `sql/012_customizing_consultant_agent.sql` — cadastra, por upsert idempotente, o agente
     padrão “Consultor de Customizing SAP”, especializado em SPRO/IMG e configuração standard.
@@ -59,6 +59,13 @@ Scripts SQL do projeto, aplicados via SQL Editor do Supabase ou pela CLI (`supab
 21. `sql/014_chat_messages_tool_activity.sql` — adiciona `chat_messages.tool_activity`
     (jsonb): snapshot final das badges de skill/ferramenta MCP usadas naquela resposta, pra
     sobreviver ao reabrir o chat. Sem RLS extra (já coberta pela política de `005`).
+22. `sql/015_tasks_kanban.sql` — cria `tasks` e `task_subtasks`, com as quatro etapas fixas
+    do quadro pessoal, prioridade, prazo, ordenação e checklist de subtarefas.
+23. `rls/015_tasks_kanban_rls.sql` — restringe cards e subtarefas ao usuário dono e impede
+    associar uma subtarefa a um card pertencente a outra conta.
+24. `sql/016_effort_estimator_editable_objects.sql` — atualiza o contrato do Estimador de
+    Esforço com cliente, natureza do objeto, resumo e multiplicadores explícitos necessários
+    para a tabela editável e o recálculo local dos três cenários.
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

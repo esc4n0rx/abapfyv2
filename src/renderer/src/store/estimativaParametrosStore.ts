@@ -262,7 +262,7 @@ export const useEstimativaParametrosStore = create<EstimativaParametrosState>((s
  * Configurações nunca tenha sido aberta nesta sessão.
  */
 export async function fetchParametrosContextBlock(userId: string): Promise<string> {
-  const [{ data: estimativaRows }, { data: clienteRows }] = await Promise.all([
+  const [estimativaResult, clienteResult] = await Promise.all([
     supabase
       .from('estimativa_parametros')
       .select('tipo, objeto, complexidade, analise_ef, espec, codific, testes')
@@ -270,12 +270,10 @@ export async function fetchParametrosContextBlock(userId: string): Promise<strin
       .order('tipo')
       .order('objeto')
       .order('complexidade'),
-    supabase
-      .from('cliente_parametros')
-      .select('*')
-      .eq('user_id', userId)
-      .order('empresa')
+    supabase.from('cliente_parametros').select('*').eq('user_id', userId).order('empresa')
   ])
+  const estimativaRows = estimativaResult.data
+  const clienteRows = clienteResult.data
 
   const estimativaLines = (estimativaRows ?? []).map(
     (row) =>
@@ -306,6 +304,13 @@ export async function fetchParametrosContextBlock(userId: string): Promise<strin
       : '_(vazia — nenhum cliente cadastrado em Configurações → Parâmetros)_'
 
   return [
+    ...(estimativaResult.error || clienteResult.error
+      ? [
+          '## Atenção: falha ao carregar parâmetros',
+          'Não gere totais como se os parâmetros estivessem disponíveis. Informe ao usuário que não foi possível consultar Configurações → Parâmetros nesta solicitação.',
+          ''
+        ]
+      : []),
     '## Tabela de Parâmetros de Estimativa',
     estimativaTable,
     '',

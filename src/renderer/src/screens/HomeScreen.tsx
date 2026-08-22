@@ -6,6 +6,7 @@ import {
   ChevronDown,
   FileText,
   FolderKanban,
+  Layers3,
   Loader2,
   Mic,
   Paperclip,
@@ -25,6 +26,8 @@ import {
 import { SkillsScreen } from '@renderer/screens/SkillsScreen'
 import { AgentsScreen } from '@renderer/screens/AgentsScreen'
 import { ProjectsScreen } from '@renderer/screens/ProjectsScreen'
+import { TasksScreen } from '@renderer/screens/TasksScreen'
+import { SessionContextPanel } from '@renderer/components/SessionContextPanel'
 import { useAuthStore } from '@renderer/store/authStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import { useAgentsStore, type AgentSource } from '@renderer/store/agentsStore'
@@ -42,6 +45,7 @@ import {
   CLAUDE_EFFORT_LEVELS,
   fetchApiKey,
   routeConversation,
+  routeSkills,
   streamChat,
   type ChatTurn,
   type ClaudeEffort,
@@ -50,6 +54,7 @@ import {
 import {
   buildMessageWithAttachments,
   extractTextFromFile,
+  parseMessageAttachments,
   type AttachmentFile
 } from '@renderer/lib/attachments'
 import './HomeScreen.css'
@@ -74,24 +79,28 @@ interface ActiveAgent {
   name: string
 }
 
-type View = 'chat' | 'skills' | 'agents' | 'projects'
+type View = 'chat' | 'skills' | 'agents' | 'projects' | 'tasks'
 
 export function HomeScreen(): JSX.Element {
   const [view, setView] = useState<View>('chat')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
+  const [agentMenuOpen, setAgentMenuOpen] = useState(false)
+  const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [input, setInput] = useState('')
   const [draftMessages, setDraftMessages] = useState<UiMessage[]>([])
   const [isRouting, setIsRouting] = useState(false)
   const [claudeEffort, setClaudeEffort] = useState<ClaudeEffort>('medium')
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [activeAgent, setActiveAgent] = useState<ActiveAgent | null>(null)
+  const [selectedAgent, setSelectedAgent] = useState<ActiveAgent | null>(null)
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null)
   const [currentProject, setCurrentProject] = useState<ProjectSummary | null>(null)
   const [sessionSkillNames, setSessionSkillNames] = useState<string[]>([])
   const [attachments, setAttachments] = useState<AttachmentFile[]>([])
 
   const modelMenuRef = useRef<HTMLDivElement>(null)
+  const agentMenuRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -147,6 +156,9 @@ export function HomeScreen(): JSX.Element {
       if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
         setModelMenuOpen(false)
       }
+      if (agentMenuRef.current && !agentMenuRef.current.contains(event.target as Node)) {
+        setAgentMenuOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -177,9 +189,12 @@ export function HomeScreen(): JSX.Element {
     setCurrentChatId(null)
     setDraftMessages([])
     setActiveAgent(null)
+    setSelectedAgent(null)
     setSystemPrompt(null)
     setSessionSkillNames([])
     setInput('')
+    setAttachments([])
+    setSessionPanelOpen(false)
   }
 
   function handleNewSession(): void {
@@ -199,10 +214,18 @@ export function HomeScreen(): JSX.Element {
     setCurrentChatId(chatId)
     setDraftMessages([])
     setInput('')
+    setAttachments([])
+    setSessionPanelOpen(false)
+    setAgentMenuOpen(false)
 
     const meta = await loadChatMeta(chatId)
     if (meta) {
       setActiveAgent(
+        meta.agentId && meta.agentSource
+          ? { source: meta.agentSource, id: meta.agentId, name: meta.agentName ?? meta.agentId }
+          : null
+      )
+      setSelectedAgent(
         meta.agentId && meta.agentSource
           ? { source: meta.agentSource, id: meta.agentId, name: meta.agentName ?? meta.agentId }
           : null
@@ -282,13 +305,20 @@ export function HomeScreen(): JSX.Element {
     const rt = useChatRuntimeStore.getState()
 
     function pushLocalError(errorText: string): void {
-      const errorMessage: UiMessage = { id: createId(), role: 'assistant', content: '', error: errorText }
+      const errorMessage: UiMessage = {
+        id: createId(),
+        role: 'assistant',
+        content: '',
+        error: errorText
+      }
       if (currentChatId) rt.appendMessage(currentChatId, errorMessage)
       else setDraftMessages((prev) => [...prev, errorMessage])
     }
 
     if (!defaultProvider || !defaultModel || !user) {
-      pushLocalError('Nenhum modelo padrão configurado. Abra Configurações → Inteligência Artificial.')
+      pushLocalError(
+        'Nenhum modelo padrão configurado. Abra Configurações → Inteligência Artificial.'
+      )
       return
     }
 
@@ -322,8 +352,30 @@ export function HomeScreen(): JSX.Element {
     let agent = activeAgent
     let prompt = systemPrompt
     let skillIds: string[] = []
+    let skillNamesForTurn = sessionSkillNames
 
     if (!chatId) {
+      const enabledSkills = skills.filter((skill) => skill.enabled)
+      const attachSkillsToPrompt = async (routedSkillIds: string[]): Promise<void> => {
+        const routedSkills = enabledSkills.filter((skill) => routedSkillIds.includes(skill.slug))
+        if (routedSkills.length === 0) return
+        skillIds = routedSkills.map((skill) => skill.slug)
+        const skillContents = await Promise.all(routedSkills.map(loadSkillContent))
+        const skillsBlock = routedSkills
+          .map((skill, index) => {
+            const content = skillContents[index]
+            const header = `### ${skill.name}\n${skill.description ?? ''}`
+            return content ? `${header}\n\n${content}` : header
+          })
+          .join('\n\n---\n\n')
+        prompt = `${prompt ?? ''}\n\n---\n\n## Skills disponíveis para esta sessão\n\nAs skills abaixo foram identificadas como relevantes para o pedido do usuário — use o conhecimento delas como referência ao responder:\n\n${skillsBlock}`
+      }
+
+      const manualAgent = selectedAgent
+        ? agents.find(
+            (item) => item.source === selectedAgent.source && item.id === selectedAgent.id
+          )
+        : undefined
       const projectAgent =
         currentProject?.defaultAgentSource && currentProject.defaultAgentId
           ? agents.find(
@@ -333,14 +385,31 @@ export function HomeScreen(): JSX.Element {
             )
           : undefined
 
-      if (projectAgent) {
+      if (manualAgent) {
+        agent = { source: manualAgent.source, id: manualAgent.id, name: manualAgent.name }
+        prompt = manualAgent.content
+        setIsRouting(true)
+        const claudeKey = await fetchApiKey(user.id, 'claude')
+        if (claudeKey) {
+          const routedSkillIds = await routeSkills(
+            claudeKey,
+            fullContent.slice(0, 4000),
+            enabledSkills.map((skill) => ({
+              id: skill.slug,
+              name: skill.name,
+              description: skill.description ?? ''
+            }))
+          )
+          await attachSkillsToPrompt(routedSkillIds)
+        }
+        setIsRouting(false)
+      } else if (projectAgent) {
         agent = { source: projectAgent.source, id: projectAgent.id, name: projectAgent.name }
         prompt = projectAgent.content
       } else if (agents.length > 0) {
         setIsRouting(true)
         const claudeKey = await fetchApiKey(user.id, 'claude')
         if (claudeKey) {
-          const enabledSkills = skills.filter((skill) => skill.enabled)
           const route = await routeConversation(
             claudeKey,
             fullContent.slice(0, 4000),
@@ -359,34 +428,16 @@ export function HomeScreen(): JSX.Element {
             prompt = routedAgent.content
           }
 
-          const routedSkills = enabledSkills.filter((skill) => route.skillIds.includes(skill.slug))
-          if (routedAgent && routedSkills.length > 0) {
-            skillIds = routedSkills.map((skill) => skill.slug)
-            const skillContents = await Promise.all(routedSkills.map(loadSkillContent))
-            const skillsBlock = routedSkills
-              .map((skill, index) => {
-                const content = skillContents[index]
-                const header = `### ${skill.name}\n${skill.description ?? ''}`
-                // Sem conteúdo carregado (skill importada sem markdown, ou
-                // SKILL.md não encontrado no bundle) cai pra nome+descrição —
-                // pior caso é o comportamento antigo, nunca fica sem nada.
-                return content ? `${header}\n\n${content}` : header
-              })
-              .join('\n\n---\n\n')
-            prompt = `${prompt}\n\n---\n\n## Skills disponíveis para esta sessão\n\nAs skills abaixo foram identificadas como relevantes para o pedido do usuário — use o conhecimento delas como referência ao responder:\n\n${skillsBlock}`
-          }
+          if (routedAgent) await attachSkillsToPrompt(route.skillIds)
         }
         setIsRouting(false)
       }
 
-      if (agent?.source === 'default' && agent.id === 'effort_estimator' && user?.id) {
-        const parametrosBlock = await fetchParametrosContextBlock(user.id)
-        prompt = `${prompt}\n\n---\n\n${parametrosBlock}`
-      }
-
-      setSessionSkillNames(
-        skills.filter((skill) => skillIds.includes(skill.slug)).map((skill) => skill.name)
-      )
+      const routedSkillNames = skills
+        .filter((skill) => skillIds.includes(skill.slug))
+        .map((skill) => skill.name)
+      setSessionSkillNames(routedSkillNames)
+      skillNamesForTurn = routedSkillNames
 
       const newChatId = await createChat({
         projectId: currentProject?.id ?? null,
@@ -418,6 +469,7 @@ export function HomeScreen(): JSX.Element {
       setDraftMessages([])
       setCurrentChatId(chatId)
       setActiveAgent(agent)
+      setSelectedAgent(agent)
       setSystemPrompt(prompt)
     }
 
@@ -431,7 +483,7 @@ export function HomeScreen(): JSX.Element {
     })
 
     const assistantId = createId()
-    const toolActivity: ToolActivityItem[] = sessionSkillNames.map((name, index) => ({
+    const toolActivity: ToolActivityItem[] = skillNamesForTurn.map((name, index) => ({
       id: `skill-${index}`,
       label: name,
       kind: 'skill',
@@ -479,6 +531,10 @@ export function HomeScreen(): JSX.Element {
     let iteration = 0
     const startTime = performance.now()
     let runtimePrompt = prompt
+    if (agent?.source === 'default' && agent.id === 'effort_estimator' && user?.id) {
+      const parametrosBlock = await fetchParametrosContextBlock(user.id)
+      runtimePrompt = `${prompt ?? ''}\n\n---\n\n## Parâmetros atuais desta solicitação\n\n${parametrosBlock}`
+    }
 
     try {
       if (agent) {
@@ -490,7 +546,7 @@ export function HomeScreen(): JSX.Element {
               model: defaultModel,
               apiKey,
               messages: history,
-              systemPrompt: prompt ?? undefined,
+              systemPrompt: runtimePrompt ?? undefined,
               servers: mcpServers,
               signal: controller.signal,
               onToolEvent: (event) => {
@@ -609,6 +665,26 @@ export function HomeScreen(): JSX.Element {
   }
 
   const firstName = profile?.nome?.split(' ')[0]
+  const sessionFiles = useMemo(() => {
+    const names = messages
+      .filter((message) => message.role === 'user')
+      .flatMap((message) =>
+        parseMessageAttachments(message.content).attachments.map((item) => item.name)
+      )
+    names.push(...attachments.map((attachment) => attachment.name))
+    return Array.from(new Set(names))
+  }, [messages, attachments])
+  const contextAgent = activeAgent ?? selectedAgent
+  const sessionMcps = useMemo(
+    () =>
+      contextAgent
+        ? configsForAgent(contextAgent.source, contextAgent.id).map((server) => server.name)
+        : [],
+    [contextAgent, configsForAgent]
+  )
+  const agentSelectorLabel = currentChatId
+    ? (activeAgent?.name ?? 'Automático')
+    : (selectedAgent?.name ?? 'Automático')
 
   return (
     <div className="home-screen">
@@ -620,6 +696,7 @@ export function HomeScreen(): JSX.Element {
         onOpenSkills={() => setView('skills')}
         onOpenAgents={() => setView('agents')}
         onOpenProjects={() => setView('projects')}
+        onOpenTasks={() => setView('tasks')}
         onSelectChat={handleSelectChat}
         onChatRemoved={handleNewSession}
       />
@@ -627,9 +704,33 @@ export function HomeScreen(): JSX.Element {
       {view === 'skills' && <SkillsScreen />}
       {view === 'agents' && <AgentsScreen />}
       {view === 'projects' && <ProjectsScreen onOpenProject={handleOpenProjectForNewChat} />}
+      {view === 'tasks' && <TasksScreen />}
 
       {view === 'chat' && (
         <div className="home-main">
+          <button
+            type="button"
+            className={`home-session-context-trigger ${sessionPanelOpen ? 'home-session-context-trigger-active' : ''}`}
+            title="Contexto da sessão"
+            onClick={() => setSessionPanelOpen((open) => !open)}
+          >
+            <Layers3 size={15} strokeWidth={1.75} />
+            <span>Contexto</span>
+            {sessionFiles.length + sessionSkillNames.length + sessionMcps.length > 0 && (
+              <span className="home-session-context-count">
+                {sessionFiles.length + sessionSkillNames.length + sessionMcps.length}
+              </span>
+            )}
+          </button>
+          {sessionPanelOpen && (
+            <SessionContextPanel
+              agentName={activeAgent?.name ?? selectedAgent?.name ?? null}
+              files={sessionFiles}
+              skills={sessionSkillNames}
+              mcps={sessionMcps}
+              onClose={() => setSessionPanelOpen(false)}
+            />
+          )}
           {(isRouting || activeAgent) && (
             <div className="home-chat-header">
               {isRouting ? (
@@ -746,6 +847,55 @@ export function HomeScreen(): JSX.Element {
               >
                 <Paperclip size={16} strokeWidth={1.75} />
               </button>
+
+              <div className="home-agent-select" ref={agentMenuRef}>
+                <button
+                  type="button"
+                  className="home-agent-trigger"
+                  disabled={Boolean(currentChatId)}
+                  title={
+                    currentChatId
+                      ? 'O agente fica fixo após a primeira mensagem'
+                      : 'Selecionar agente'
+                  }
+                  onClick={() => setAgentMenuOpen((open) => !open)}
+                >
+                  <Bot size={14} strokeWidth={1.75} />
+                  <span>{agentSelectorLabel}</span>
+                  {!currentChatId && <ChevronDown size={12} strokeWidth={1.75} />}
+                </button>
+                {agentMenuOpen && !currentChatId && (
+                  <div className="home-agent-menu">
+                    <button
+                      type="button"
+                      className={`home-agent-menu-item ${!selectedAgent ? 'home-agent-menu-item-active' : ''}`}
+                      onClick={() => {
+                        setSelectedAgent(null)
+                        setAgentMenuOpen(false)
+                      }}
+                    >
+                      <span>Automático</span>
+                      <small>O Abapfy escolhe o agente ideal</small>
+                    </button>
+                    {agents.map((agent) => (
+                      <button
+                        key={`${agent.source}-${agent.id}`}
+                        type="button"
+                        className={`home-agent-menu-item ${selectedAgent?.source === agent.source && selectedAgent.id === agent.id ? 'home-agent-menu-item-active' : ''}`}
+                        onClick={() => {
+                          setSelectedAgent({ source: agent.source, id: agent.id, name: agent.name })
+                          setAgentMenuOpen(false)
+                        }}
+                      >
+                        <span>{agent.name}</span>
+                        <small>
+                          {agent.source === 'default' ? 'Agente padrão' : 'Agente personalizado'}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="home-composer-spacer" />
 

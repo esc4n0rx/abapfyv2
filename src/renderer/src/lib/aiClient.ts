@@ -361,3 +361,52 @@ export async function routeConversation(
     return { agentId: null, skillIds: [] }
   }
 }
+
+/** Classifica somente skills quando o usuário já fixou o agente no composer. */
+export async function routeSkills(
+  claudeApiKey: string,
+  userMessage: string,
+  skills: SkillCatalogEntry[]
+): Promise<string[]> {
+  if (skills.length === 0) return []
+
+  const skillCatalog = skills
+    .map((skill) => `- ${skill.id}: ${skill.name} — ${skill.description}`)
+    .join('\n')
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeApiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: ROUTER_MODEL,
+      max_tokens: 220,
+      system:
+        'Você classifica skills para uma sessão cujo agente já foi escolhido pelo usuário. Responda APENAS com JSON válido no formato exato: {"skill_ids":["ids diretamente relevantes, no máximo 5"]}. Nunca escolha, sugira ou altere o agente. Nunca invente ids.',
+      messages: [
+        {
+          role: 'user',
+          content: `Catálogo de skills habilitadas:\n${skillCatalog}\n\nMensagem do usuário:\n${userMessage}`
+        }
+      ]
+    })
+  })
+
+  if (!response.ok) return []
+  try {
+    const data = await response.json()
+    const raw: string = data.content?.[0]?.text?.trim() ?? '{}'
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw)
+    return Array.isArray(parsed.skill_ids)
+      ? parsed.skill_ids.filter(
+          (id: unknown) => typeof id === 'string' && skills.some((skill) => skill.id === id)
+        )
+      : []
+  } catch {
+    return []
+  }
+}

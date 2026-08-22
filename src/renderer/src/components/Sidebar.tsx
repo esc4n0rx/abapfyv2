@@ -32,7 +32,7 @@ const SHORTCUTS: { id: ShortcutId; icon: typeof Sparkles; label: string }[] = [
   { id: 'agents', icon: Bot, label: 'Agentes' }
 ]
 
-export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects'
+export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects' | 'tasks'
 
 interface SidebarProps {
   activeView: SidebarView
@@ -42,6 +42,7 @@ interface SidebarProps {
   onOpenSkills: () => void
   onOpenAgents: () => void
   onOpenProjects: () => void
+  onOpenTasks: () => void
   onSelectChat: (chatId: string) => void
   onChatRemoved?: (chatId: string) => void
 }
@@ -135,7 +136,11 @@ function ChatRowMenu({ chat, projects, onDelete, onArchive, onMove }: ChatRowPro
         <div className="chat-row-menu-panel" onMouseDown={(event) => event.stopPropagation()}>
           {mode === 'main' ? (
             <>
-              <button type="button" className="chat-row-menu-item" onClick={() => setMode('projects')}>
+              <button
+                type="button"
+                className="chat-row-menu-item"
+                onClick={() => setMode('projects')}
+              >
                 <FolderInput size={14} strokeWidth={1.75} />
                 Adicionar a projeto
               </button>
@@ -203,6 +208,7 @@ export function Sidebar({
   onOpenSkills,
   onOpenAgents,
   onOpenProjects,
+  onOpenTasks,
   onSelectChat,
   onChatRemoved
 }: SidebarProps): JSX.Element {
@@ -282,6 +288,7 @@ export function Sidebar({
     if (id === 'skills') onOpenSkills()
     if (id === 'agents') onOpenAgents()
     if (id === 'projects') onOpenProjects()
+    if (id === 'tasks') onOpenTasks()
     if (id === 'new-session') onNewSession()
   }
 

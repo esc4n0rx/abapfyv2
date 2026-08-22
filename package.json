@@ -1,6 +1,6 @@
 {
   "name": "abapfy",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Abapfy — cliente desktop de chat com ferramentas para o ecossistema SAP/ABAP",
   "main": "./out/main/index.js",
   "author": "Abapfy",

@@ -1,5 +1,11 @@
-import { Zap, Shield, ShieldCheck } from 'lucide-react'
-import type { EstimateData, EstimateScenario } from '@renderer/lib/estimateCards'
+import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, RotateCcw, Shield, ShieldCheck, Zap } from 'lucide-react'
+import {
+  recalculateEstimate,
+  type EstimateData,
+  type EstimateScenario
+} from '@renderer/lib/estimateCards'
+import { useEstimativaParametrosStore } from '@renderer/store/estimativaParametrosStore'
 import './EstimateScenarioCards.css'
 
 const PHASE_LABELS: { key: keyof EstimateScenario['distribuicao']; label: string }[] = [
@@ -17,9 +23,27 @@ const SCENARIOS: {
   icon: typeof Zap
   tone: 'danger' | 'primary' | 'success'
 }[] = [
-  { key: 'agressiva', label: 'Agressiva', subtitle: 'Poucas horas · maior risco', icon: Zap, tone: 'danger' },
-  { key: 'segura', label: 'Segura', subtitle: 'Equilíbrio · recomendada', icon: Shield, tone: 'primary' },
-  { key: 'tranquila', label: 'Tranquila', subtitle: 'Mais horas · menor risco', icon: ShieldCheck, tone: 'success' }
+  {
+    key: 'agressiva',
+    label: 'Agressiva',
+    subtitle: 'Poucas horas · maior risco',
+    icon: Zap,
+    tone: 'danger'
+  },
+  {
+    key: 'segura',
+    label: 'Segura',
+    subtitle: 'Equilíbrio · recomendada',
+    icon: Shield,
+    tone: 'primary'
+  },
+  {
+    key: 'tranquila',
+    label: 'Tranquila',
+    subtitle: 'Mais horas · menor risco',
+    icon: ShieldCheck,
+    tone: 'success'
+  }
 ]
 
 function formatHours(value: number): string {
@@ -90,25 +114,25 @@ function ScenarioCard({
         )}
 
         {scenario.premissas.length > 0 && (
-          <section className="estimate-card-section">
-            <h4>Premissas</h4>
+          <details className="estimate-card-details">
+            <summary>Premissas ({scenario.premissas.length})</summary>
             <ul className="estimate-list estimate-list-premissas">
               {scenario.premissas.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
-          </section>
+          </details>
         )}
 
         {scenario.riscos.length > 0 && (
-          <section className="estimate-card-section">
-            <h4 className="estimate-card-section-danger">Riscos</h4>
+          <details className="estimate-card-details estimate-card-details-danger">
+            <summary>Riscos ({scenario.riscos.length})</summary>
             <ul className="estimate-list estimate-list-riscos">
               {scenario.riscos.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
-          </section>
+          </details>
         )}
       </div>
     </div>
@@ -116,14 +140,157 @@ function ScenarioCard({
 }
 
 export function EstimateScenarioCards({ data }: { data: EstimateData }): JSX.Element {
+  const { loaded, estimativas, clientes, load } = useEstimativaParametrosStore((state) => ({
+    loaded: state.loaded,
+    estimativas: state.estimativas,
+    clientes: state.clientes,
+    load: state.load
+  }))
+  const [complexities, setComplexities] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!loaded) void load()
+  }, [loaded, load])
+
+  useEffect(() => {
+    setComplexities(
+      Object.fromEntries(
+        data.objetosIdentificados.map((object, index) => [
+          `${index}-${object.nome}`,
+          object.complexidade
+        ])
+      )
+    )
+  }, [data])
+
+  const recalculation = useMemo(
+    () => recalculateEstimate(data, complexities, estimativas, clientes),
+    [data, complexities, estimativas, clientes]
+  )
+  const canRecalculate =
+    loaded && data.objetosIdentificados.length > 0 && recalculation.unmatchedObjects.length === 0
+  const displayData = canRecalculate ? recalculation.data : data
+  const wasEdited = data.objetosIdentificados.some(
+    (object, index) => complexities[`${index}-${object.nome}`] !== object.complexidade
+  )
+
+  function complexityOptions(index: number): string[] {
+    const object = data.objetosIdentificados[index]
+    const normalize = (value: string): string =>
+      value
+        .trim()
+        .toLocaleLowerCase('pt-BR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+    const matches = estimativas.filter(
+      (parameter) =>
+        normalize(parameter.tipo) === normalize(object.tipo) &&
+        (!object.objeto || normalize(parameter.objeto) === normalize(object.objeto))
+    )
+    return Array.from(new Set([object.complexidade, ...matches.map((item) => item.complexidade)]))
+  }
+
   return (
     <div className="estimate-scenarios">
       <header className="estimate-scenarios-header">
-        <span className="estimate-scenarios-project">{data.projeto}</span>
+        <div className="estimate-scenarios-title-row">
+          <span className="estimate-scenarios-project">{data.projeto}</span>
+          {data.cliente && <span className="estimate-client-badge">{data.cliente}</span>}
+        </div>
         <span className="estimate-scenarios-meta">
           {data.versaoSap} · Complexidade geral: {data.complexidadeGeral}
         </span>
       </header>
+
+      {data.objetosIdentificados.length > 0 && (
+        <section className="estimate-objects-section">
+          <div className="estimate-objects-header">
+            <div>
+              <h3>Objetos identificados</h3>
+              <p>Altere a complexidade para recalcular os três cenários.</p>
+            </div>
+            {wasEdited && (
+              <button
+                type="button"
+                onClick={() =>
+                  setComplexities(
+                    Object.fromEntries(
+                      data.objetosIdentificados.map((object, index) => [
+                        `${index}-${object.nome}`,
+                        object.complexidade
+                      ])
+                    )
+                  )
+                }
+              >
+                <RotateCcw size={12} /> Restaurar
+              </button>
+            )}
+          </div>
+          <div className="estimate-objects-table-wrap">
+            <table className="estimate-objects-table">
+              <thead>
+                <tr>
+                  <th>Objeto</th>
+                  <th>Tipo</th>
+                  <th>Complexidade</th>
+                  <th>Resumo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.objetosIdentificados.map((object, index) => {
+                  const key = `${index}-${object.nome}`
+                  return (
+                    <tr key={key}>
+                      <td>
+                        <strong>{object.nome}</strong>
+                        {object.objeto && <small>{object.objeto}</small>}
+                      </td>
+                      <td>{object.tipo}</td>
+                      <td>
+                        <select
+                          value={complexities[key] ?? object.complexidade}
+                          onChange={(event) =>
+                            setComplexities((current) => ({
+                              ...current,
+                              [key]: event.target.value
+                            }))
+                          }
+                        >
+                          {complexityOptions(index).map((complexity) => (
+                            <option key={complexity} value={complexity}>
+                              {complexity}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td title={object.justificativa}>{object.resumo || object.justificativa}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {!canRecalculate && loaded && (
+            <div className="estimate-recalculation-warning">
+              <AlertTriangle size={13} />
+              Sem combinação exata nos parâmetros para: {recalculation.unmatchedObjects.join(', ')}.
+              Os totais originais foram preservados.
+            </div>
+          )}
+          {canRecalculate && (
+            <p className="estimate-recalculation-source">
+              Totais calculados com os parâmetros atuais de Configurações
+              {data.cliente
+                ? recalculation.clientMatched
+                  ? ` e fatores do cliente ${data.cliente}`
+                  : `; cliente ${data.cliente} não encontrado, fator 1,00 aplicado`
+                : '; nenhum cliente identificado, fator 1,00 aplicado'}
+              .
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="estimate-scenarios-grid">
         {SCENARIOS.map(({ key, label, subtitle, icon, tone }) => (
@@ -133,12 +300,14 @@ export function EstimateScenarioCards({ data }: { data: EstimateData }): JSX.Ele
             subtitle={subtitle}
             icon={icon}
             tone={tone}
-            scenario={data.estimativas[key]}
+            scenario={displayData.estimativas[key]}
           />
         ))}
       </div>
 
-      {data.notasGerais && <p className="estimate-scenarios-notes">{data.notasGerais}</p>}
+      {displayData.notasGerais && (
+        <p className="estimate-scenarios-notes">{displayData.notasGerais}</p>
+      )}
     </div>
   )
 }

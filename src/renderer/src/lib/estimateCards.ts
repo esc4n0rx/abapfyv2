@@ -8,21 +8,39 @@ export interface EstimateDistribution {
 
 export interface EstimateScenario {
   totalHoras: number
+  multiplicador: number
   distribuicao: EstimateDistribution
   premissas: string[]
   riscos: string[]
 }
 
+export interface EstimateObject {
+  nome: string
+  tipo: string
+  objeto: string
+  complexidade: string
+  resumo: string
+  justificativa: string
+}
+
 export interface EstimateData {
   projeto: string
   versaoSap: string
+  cliente: string
   complexidadeGeral: string
+  objetosIdentificados: EstimateObject[]
   estimativas: {
     agressiva: EstimateScenario
     segura: EstimateScenario
     tranquila: EstimateScenario
   }
   notasGerais: string
+}
+
+export interface EstimateRecalculation {
+  data: EstimateData
+  unmatchedObjects: string[]
+  clientMatched: boolean
 }
 
 function asString(value: unknown, fallback = ''): string {
@@ -34,7 +52,100 @@ function asNumber(value: unknown): number {
 }
 
 function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
+}
+
+function normalize(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function roundHours(value: number): number {
+  return Math.round(value * 10) / 10
+}
+
+function scenarioMultiplier(key: 'agressiva' | 'segura' | 'tranquila', value: number): number {
+  if (value > 0) return value
+  return key === 'agressiva' ? 0.75 : key === 'segura' ? 1 : 1.35
+}
+
+export function findEstimateParameter(
+  object: EstimateObject,
+  complexity: string,
+  parameters: EstimativaParametro[]
+): EstimativaParametro | null {
+  const candidates = parameters.filter(
+    (item) =>
+      normalize(item.tipo) === normalize(object.tipo) &&
+      normalize(item.complexidade) === normalize(complexity)
+  )
+  if (object.objeto) {
+    return candidates.find((item) => normalize(item.objeto) === normalize(object.objeto)) ?? null
+  }
+  if (candidates.length === 1) return candidates[0]
+  return candidates.find((item) => normalize(item.objeto) === 'alteracao') ?? candidates[0] ?? null
+}
+
+export function recalculateEstimate(
+  original: EstimateData,
+  complexities: Record<string, string>,
+  parameters: EstimativaParametro[],
+  clients: ClienteParametro[]
+): EstimateRecalculation {
+  const unmatchedObjects: string[] = []
+  const base = { analise_ef: 0, espec: 0, codific: 0, testes: 0, outros: 0 }
+
+  const objects = original.objetosIdentificados.map((object, index) => {
+    const key = `${index}-${object.nome}`
+    const complexidade = complexities[key] ?? object.complexidade
+    const parameter = findEstimateParameter(object, complexidade, parameters)
+    if (!parameter) unmatchedObjects.push(object.nome)
+    else {
+      base.analise_ef += parameter.analiseEf
+      base.espec += parameter.espec
+      base.codific += parameter.codific
+      base.testes += parameter.testes
+    }
+    return { ...object, complexidade }
+  })
+
+  const client = original.cliente
+    ? clients.find((item) => normalize(item.empresa) === normalize(original.cliente))
+    : undefined
+  const factoredBase = {
+    analise_ef: base.analise_ef * (client?.espFunc ?? 1),
+    espec: base.espec * (client?.espTec ?? 1),
+    codific: base.codific * (client?.codific ?? 1),
+    testes: base.testes * (client?.testeUnitario ?? 1),
+    outros: base.outros
+  }
+
+  const estimativas = { ...original.estimativas }
+  ;(['agressiva', 'segura', 'tranquila'] as const).forEach((key) => {
+    const multiplier = scenarioMultiplier(key, original.estimativas[key].multiplicador)
+    const distribuicao = Object.fromEntries(
+      Object.entries(factoredBase).map(([phase, hours]) => [phase, roundHours(hours * multiplier)])
+    ) as EstimateDistribution
+    estimativas[key] = {
+      ...original.estimativas[key],
+      multiplicador: multiplier,
+      distribuicao,
+      totalHoras: roundHours(
+        Object.values(distribuicao).reduce((sum, value) => sum + (value ?? 0), 0)
+      )
+    }
+  })
+
+  return {
+    data: { ...original, objetosIdentificados: objects, estimativas },
+    unmatchedObjects,
+    clientMatched: Boolean(client)
+  }
 }
 
 function parseScenario(value: unknown): EstimateScenario | null {
@@ -49,6 +160,7 @@ function parseScenario(value: unknown): EstimateScenario | null {
 
   return {
     totalHoras: asNumber(raw.total_horas),
+    multiplicador: asNumber(raw.multiplicador),
     distribuicao: {
       analise_ef: asNumber(distribuicaoRaw.analise_ef),
       espec: asNumber(distribuicaoRaw.espec),
@@ -59,6 +171,20 @@ function parseScenario(value: unknown): EstimateScenario | null {
     premissas: asStringArray(raw.premissas),
     riscos: asStringArray(raw.riscos)
   }
+}
+
+function parseObjects(value: unknown): EstimateObject[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({
+      nome: asString(item.nome, 'Objeto não identificado'),
+      tipo: asString(item.tipo, 'A CONFIRMAR'),
+      objeto: asString(item.objeto, ''),
+      complexidade: asString(item.complexidade, 'Media'),
+      resumo: asString(item.resumo, asString(item.justificativa, '')),
+      justificativa: asString(item.justificativa, '')
+    }))
 }
 
 /**
@@ -83,7 +209,9 @@ export function parseEstimateData(raw: string): EstimateData | null {
     return {
       projeto: asString(parsed.projeto, 'Projeto'),
       versaoSap: asString(parsed.versao_sap, 'A CONFIRMAR'),
+      cliente: asString(parsed.cliente, ''),
       complexidadeGeral: asString(parsed.complexidade_geral, 'A CONFIRMAR'),
+      objetosIdentificados: parseObjects(parsed.objetos_identificados),
       estimativas: { agressiva, segura, tranquila },
       notasGerais: asString(parsed.notas_gerais, '')
     }
@@ -91,3 +219,7 @@ export function parseEstimateData(raw: string): EstimateData | null {
     return null
   }
 }
+import type {
+  ClienteParametro,
+  EstimativaParametro
+} from '@renderer/store/estimativaParametrosStore'

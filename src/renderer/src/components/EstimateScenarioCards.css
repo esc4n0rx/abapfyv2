@@ -11,6 +11,21 @@
   gap: 2px;
 }
 
+.estimate-scenarios-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.estimate-client-badge {
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-ink-subtle);
+  font-family: var(--font-text);
+  font-size: 10px;
+}
+
 .estimate-scenarios-project {
   font-family: var(--font-display);
   font-size: 15px;
@@ -26,9 +41,145 @@
 
 .estimate-scenarios-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.estimate-objects-section {
+  overflow: hidden;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+}
+
+.estimate-objects-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--space-md);
-  align-items: start;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.estimate-objects-header h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font: 600 13px var(--font-text);
+}
+
+.estimate-objects-header p {
+  margin: 3px 0 0;
+  color: var(--color-ink-tertiary);
+  font: 10px var(--font-text);
+}
+
+.estimate-objects-header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-subtle);
+  font: 11px var(--font-text);
+}
+
+.estimate-objects-header button:hover {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+.estimate-objects-table-wrap {
+  overflow-x: auto;
+}
+
+.estimate-objects-table {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: var(--font-text);
+}
+
+.estimate-objects-table th {
+  padding: 8px 10px;
+  color: var(--color-ink-tertiary);
+  font-size: 9px;
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.estimate-objects-table th:nth-child(1) {
+  width: 24%;
+}
+.estimate-objects-table th:nth-child(2) {
+  width: 15%;
+}
+.estimate-objects-table th:nth-child(3) {
+  width: 19%;
+}
+.estimate-objects-table th:nth-child(4) {
+  width: 42%;
+}
+
+.estimate-objects-table td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-ink-subtle);
+  font-size: 11px;
+  line-height: 1.4;
+  vertical-align: top;
+}
+
+.estimate-objects-table td strong {
+  display: block;
+  overflow: hidden;
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estimate-objects-table td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-ink-tertiary);
+  font-size: 9px;
+}
+
+.estimate-objects-table select {
+  width: 100%;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--color-surface-2);
+  color: var(--color-ink-muted);
+  font: 10px var(--font-text);
+}
+
+.estimate-objects-table select:focus {
+  border-color: var(--color-primary-focus);
+}
+.estimate-recalculation-source {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-ink-tertiary);
+  font: 10px/1.4 var(--font-text);
+}
+.estimate-recalculation-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(229, 72, 77, 0.22);
+  background: rgba(229, 72, 77, 0.08);
+  color: #f2a1a4;
+  font: 10px/1.4 var(--font-text);
 }
 
 .estimate-card {
@@ -108,6 +259,26 @@
   flex-direction: column;
   gap: var(--space-md);
   padding: var(--space-md);
+}
+
+.estimate-card-details {
+  border-top: 1px solid var(--color-hairline);
+  padding-top: var(--space-sm);
+}
+
+.estimate-card-details summary {
+  cursor: pointer;
+  color: var(--color-ink-subtle);
+  font: 600 10px var(--font-text);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.estimate-card-details-danger summary {
+  color: #f08084;
+}
+.estimate-card-details .estimate-list {
+  margin-top: var(--space-sm);
 }
 
 .estimate-card-section h4 {
@@ -196,4 +367,10 @@
   font-size: 12.5px;
   color: var(--color-ink-tertiary);
   font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .estimate-scenarios-grid {
+    grid-template-columns: 1fr;
+  }
 }

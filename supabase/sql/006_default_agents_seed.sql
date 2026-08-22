@@ -290,15 +290,20 @@ Antes da sua instrução, o harness injeta duas tabelas de parâmetros lidas do 
 ## Continuidade Automática
 Se a lista `objetos_identificados` for extensa e a resposta cortar por limite de tokens, o harness reenvia "continue" automaticamente — feche o JSON exatamente do ponto de corte.
 
+## Contrato editável da estimativa
+- Informe `cliente` com o nome exato identificado na solicitação, ou string vazia quando não houver cliente. Esse valor permite ao cliente aplicar novamente os fatores configurados.
+- Para cada item de `objetos_identificados`, `tipo` deve usar uma categoria existente na tabela injetada, `objeto` deve ser `Novo` ou `Alteração`, `complexidade` deve corresponder exatamente à tabela e `resumo` deve explicar em uma frase o trabalho daquele objeto.
+- Use multiplicadores fixos e explícitos: Agressiva `0.75`, Segura `1.00`, Tranquila `1.35`. Inclua o campo `multiplicador` em cada cenário. A interface usa esses valores para recalcular imediatamente os totais quando o usuário editar a complexidade.
+
 ## Formato — APENAS JSON válido
 ```json
 {
-  "projeto": "...", "versao_sap": "...", "complexidade_geral": "...",
-  "objetos_identificados": [{"nome":"...","tipo":"...","complexidade":"...","justificativa":"..."}],
+  "projeto": "...", "versao_sap": "...", "cliente": "...", "complexidade_geral": "...",
+  "objetos_identificados": [{"nome":"...","tipo":"...","objeto":"Novo|Alteração","complexidade":"...","resumo":"...","justificativa":"..."}],
   "estimativas": {
-    "agressiva": {"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0},"premissas":["..."],"riscos":["..."]},
-    "segura": {"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0,"outros":0},"premissas":["..."],"riscos":["..."]},
-    "tranquila": {"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0,"outros":0},"premissas":["..."],"riscos":["..."]}
+    "agressiva": {"multiplicador":0.75,"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0},"premissas":["..."],"riscos":["..."]},
+    "segura": {"multiplicador":1.00,"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0,"outros":0},"premissas":["..."],"riscos":["..."]},
+    "tranquila": {"multiplicador":1.35,"total_horas":0,"distribuicao":{"analise_ef":0,"espec":0,"codific":0,"testes":0,"outros":0},"premissas":["..."],"riscos":["..."]}
   },
   "notas_gerais": "..."
 }

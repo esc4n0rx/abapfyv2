@@ -12,6 +12,7 @@ import { useAgentsStore } from '@renderer/store/agentsStore'
 import { useChatStore } from '@renderer/store/chatStore'
 import { useUsageStore } from '@renderer/store/usageStore'
 import { useMcpStore } from '@renderer/store/mcpStore'
+import { useTasksStore } from '@renderer/store/tasksStore'
 
 function App(): JSX.Element {
   const init = useAuthStore((state) => state.init)
@@ -37,6 +38,10 @@ function App(): JSX.Element {
     loadMcp: state.load,
     resetMcp: state.reset
   }))
+  const { loadTasks, resetTasks } = useTasksStore((state) => ({
+    loadTasks: state.load,
+    resetTasks: state.reset
+  }))
 
   useEffect(() => {
     init()
@@ -49,6 +54,7 @@ function App(): JSX.Element {
       loadAgents()
       loadChats()
       loadMcp()
+      loadTasks()
     } else if (status === 'unauthenticated') {
       resetSettings()
       resetSkills()
@@ -56,6 +62,7 @@ function App(): JSX.Element {
       resetChats()
       resetUsage()
       resetMcp()
+      resetTasks()
     }
   }, [
     status,
@@ -69,7 +76,9 @@ function App(): JSX.Element {
     resetChats,
     resetUsage,
     loadMcp,
-    resetMcp
+    resetMcp,
+    loadTasks,
+    resetTasks
   ])
 
   return (
