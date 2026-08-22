@@ -10,6 +10,7 @@ import {
   Loader2,
   Mic,
   Paperclip,
+  ServerCog,
   Sparkles,
   Square,
   X,
@@ -40,6 +41,13 @@ import { parseClarify } from '@renderer/lib/clarify'
 import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
 import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
 import { loadSkillContent } from '@renderer/lib/skillContent'
+import { buildKnowledgePrompt, searchProjectKnowledge } from '@renderer/lib/projectKnowledge'
+import {
+  buildSapEnvironmentPrompt,
+  DEFAULT_SAP_ENVIRONMENT_ID,
+  getSapEnvironment,
+  SAP_ENVIRONMENTS
+} from '@renderer/lib/sapEnvironments'
 import {
   CLAUDE_EFFORT_LABELS_PT,
   CLAUDE_EFFORT_LEVELS,
@@ -86,6 +94,7 @@ export function HomeScreen(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
+  const [environmentMenuOpen, setEnvironmentMenuOpen] = useState(false)
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [input, setInput] = useState('')
   const [draftMessages, setDraftMessages] = useState<UiMessage[]>([])
@@ -98,9 +107,11 @@ export function HomeScreen(): JSX.Element {
   const [currentProject, setCurrentProject] = useState<ProjectSummary | null>(null)
   const [sessionSkillNames, setSessionSkillNames] = useState<string[]>([])
   const [attachments, setAttachments] = useState<AttachmentFile[]>([])
+  const [sapEnvironmentId, setSapEnvironmentId] = useState(DEFAULT_SAP_ENVIRONMENT_ID)
 
   const modelMenuRef = useRef<HTMLDivElement>(null)
   const agentMenuRef = useRef<HTMLDivElement>(null)
+  const environmentMenuRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -159,6 +170,12 @@ export function HomeScreen(): JSX.Element {
       if (agentMenuRef.current && !agentMenuRef.current.contains(event.target as Node)) {
         setAgentMenuOpen(false)
       }
+      if (
+        environmentMenuRef.current &&
+        !environmentMenuRef.current.contains(event.target as Node)
+      ) {
+        setEnvironmentMenuOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -194,6 +211,7 @@ export function HomeScreen(): JSX.Element {
     setSessionSkillNames([])
     setInput('')
     setAttachments([])
+    setSapEnvironmentId(DEFAULT_SAP_ENVIRONMENT_ID)
     setSessionPanelOpen(false)
   }
 
@@ -231,6 +249,7 @@ export function HomeScreen(): JSX.Element {
           : null
       )
       setSystemPrompt(meta.systemPrompt)
+      setSapEnvironmentId(meta.sapEnvironmentId ?? DEFAULT_SAP_ENVIRONMENT_ID)
       setCurrentProject(
         meta.projectId ? (projects.find((p) => p.id === meta.projectId) ?? null) : null
       )
@@ -335,6 +354,9 @@ export function HomeScreen(): JSX.Element {
         content: attachment.content ?? ''
       }))
     )
+    const selectedSapEnvironment = getSapEnvironment(sapEnvironmentId)
+    const environmentContext = buildSapEnvironmentPrompt(selectedSapEnvironment)
+    const routingContent = `${fullContent.slice(0, 4000)}\n\n${environmentContext}`
 
     const history: ChatTurn[] = messages
       .filter((message) => !message.error)
@@ -393,7 +415,7 @@ export function HomeScreen(): JSX.Element {
         if (claudeKey) {
           const routedSkillIds = await routeSkills(
             claudeKey,
-            fullContent.slice(0, 4000),
+            routingContent,
             enabledSkills.map((skill) => ({
               id: skill.slug,
               name: skill.name,
@@ -412,7 +434,7 @@ export function HomeScreen(): JSX.Element {
         if (claudeKey) {
           const route = await routeConversation(
             claudeKey,
-            fullContent.slice(0, 4000),
+            routingContent,
             agents.map((item) => ({ id: item.id, name: item.name, description: item.description })),
             enabledSkills.map((skill) => ({
               id: skill.slug,
@@ -448,7 +470,9 @@ export function HomeScreen(): JSX.Element {
         systemPrompt: prompt,
         provider: defaultProvider,
         model: defaultModel,
-        skillIds
+        skillIds,
+        sapEnvironmentId: selectedSapEnvironment.id,
+        sapEnvironmentLabel: selectedSapEnvironment.label
       })
 
       if (!newChatId) {
@@ -531,9 +555,20 @@ export function HomeScreen(): JSX.Element {
     let iteration = 0
     const startTime = performance.now()
     let runtimePrompt = prompt
+    runtimePrompt = `${runtimePrompt ?? ''}\n\n---\n\n${environmentContext}`
     if (agent?.source === 'default' && agent.id === 'effort_estimator' && user?.id) {
       const parametrosBlock = await fetchParametrosContextBlock(user.id)
-      runtimePrompt = `${prompt ?? ''}\n\n---\n\n## Parâmetros atuais desta solicitação\n\n${parametrosBlock}`
+      runtimePrompt = `${runtimePrompt}\n\n---\n\n## Parâmetros atuais desta solicitação\n\n${parametrosBlock}`
+    }
+
+    if (currentProject?.id && user?.id) {
+      const knowledgeMatches = await searchProjectKnowledge(
+        user.id,
+        currentProject.id,
+        fullContent.slice(0, 4000)
+      )
+      const knowledgeBlock = buildKnowledgePrompt(knowledgeMatches)
+      if (knowledgeBlock) runtimePrompt = `${runtimePrompt}\n\n---\n\n${knowledgeBlock}`
     }
 
     try {
@@ -557,10 +592,10 @@ export function HomeScreen(): JSX.Element {
                 pushToolActivity()
               }
             })
-            if (mcpEvidence) runtimePrompt = `${prompt ?? ''}\n\n---\n\n${mcpEvidence}`
+            if (mcpEvidence) runtimePrompt = `${runtimePrompt ?? ''}\n\n---\n\n${mcpEvidence}`
           } catch (mcpError) {
             if ((mcpError as Error).name === 'AbortError') throw mcpError
-            runtimePrompt = `${prompt ?? ''}\n\n---\n\n## Falha MCP nesta interação\nNão foi possível consultar as ferramentas configuradas: ${(mcpError as Error).message}. Informe essa limitação ao usuário e não apresente dados MCP como verificados.`
+            runtimePrompt = `${runtimePrompt ?? ''}\n\n---\n\n## Falha MCP nesta interação\nNão foi possível consultar as ferramentas configuradas: ${(mcpError as Error).message}. Informe essa limitação ao usuário e não apresente dados MCP como verificados.`
           }
         }
       }
@@ -685,6 +720,7 @@ export function HomeScreen(): JSX.Element {
   const agentSelectorLabel = currentChatId
     ? (activeAgent?.name ?? 'Automático')
     : (selectedAgent?.name ?? 'Automático')
+  const selectedSapEnvironment = getSapEnvironment(sapEnvironmentId)
 
   return (
     <div className="home-screen">
@@ -728,6 +764,7 @@ export function HomeScreen(): JSX.Element {
               files={sessionFiles}
               skills={sessionSkillNames}
               mcps={sessionMcps}
+              environment={selectedSapEnvironment.label}
               onClose={() => setSessionPanelOpen(false)}
             />
           )}
@@ -891,6 +928,42 @@ export function HomeScreen(): JSX.Element {
                         <small>
                           {agent.source === 'default' ? 'Agente padrão' : 'Agente personalizado'}
                         </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="home-agent-select home-environment-select" ref={environmentMenuRef}>
+                <button
+                  type="button"
+                  className="home-agent-trigger"
+                  disabled={Boolean(currentChatId)}
+                  title={
+                    currentChatId
+                      ? 'O ambiente fica fixo após a primeira mensagem'
+                      : 'Selecionar ambiente SAP'
+                  }
+                  onClick={() => setEnvironmentMenuOpen((open) => !open)}
+                >
+                  <ServerCog size={14} strokeWidth={1.75} />
+                  <span>{selectedSapEnvironment.label}</span>
+                  {!currentChatId && <ChevronDown size={12} strokeWidth={1.75} />}
+                </button>
+                {environmentMenuOpen && !currentChatId && (
+                  <div className="home-agent-menu home-environment-menu">
+                    {SAP_ENVIRONMENTS.map((environment) => (
+                      <button
+                        key={environment.id}
+                        type="button"
+                        className={`home-agent-menu-item ${environment.id === sapEnvironmentId ? 'home-agent-menu-item-active' : ''}`}
+                        onClick={() => {
+                          setSapEnvironmentId(environment.id)
+                          setEnvironmentMenuOpen(false)
+                        }}
+                      >
+                        <span>{environment.label}</span>
+                        <small>{environment.family}</small>
                       </button>
                     ))}
                   </div>

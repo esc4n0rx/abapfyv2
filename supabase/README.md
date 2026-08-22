@@ -66,6 +66,18 @@ user_id`) nas duas tabelas acima.
 24. `sql/016_effort_estimator_editable_objects.sql` — atualiza o contrato do Estimador de
     Esforço com cliente, natureza do objeto, resumo e multiplicadores explícitos necessários
     para a tabela editável e o recálculo local dos três cenários.
+25. `sql/017_project_knowledge.sql` — ativa `pgvector`, cria documentos/trechos por projeto e
+    as RPCs de busca semântica e textual.
+26. `rls/017_project_knowledge_rls.sql` — isola documentos e trechos pelo dono e valida o
+    vínculo com um projeto pertencente ao usuário.
+27. `sql/018_chat_sap_environment.sql` — persiste o produto/release SAP selecionado em cada
+    conversa.
+28. `sql/019_advanced_kanban.sql` — converte os status fixos em colunas configuráveis e
+    acrescenta labels, módulo, responsável, vínculos, dependências, esforço, lembrete e
+    recorrência, preservando os cards existentes.
+29. `rls/019_advanced_kanban_rls.sql` — restringe as colunas configuráveis ao usuário dono.
+30. `sql/020_sap_horizon_themes.sql` — troca o catálogo antigo pelo SAP Horizon/Quartz e
+    migra preferências legadas para o novo tema claro padrão.
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

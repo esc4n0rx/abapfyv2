@@ -23,7 +23,7 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-text);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   letter-spacing: -0.05px;
   -webkit-font-smoothing: antialiased;
@@ -81,6 +81,24 @@ button {
   flex-direction: column;
   height: 100%;
   background: var(--color-canvas);
+}
+
+button,
+input,
+textarea,
+select {
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
 }
 
 .app-content {

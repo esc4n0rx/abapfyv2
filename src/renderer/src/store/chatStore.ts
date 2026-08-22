@@ -31,6 +31,8 @@ export interface ChatMeta {
   provider: string | null
   model: string | null
   skillIds: string[]
+  sapEnvironmentId: string | null
+  sapEnvironmentLabel: string | null
 }
 
 export interface PersistedToolActivity {
@@ -60,6 +62,8 @@ interface CreateChatInput {
   provider: string
   model: string
   skillIds: string[]
+  sapEnvironmentId: string | null
+  sapEnvironmentLabel: string | null
 }
 
 interface CreateProjectInput {
@@ -214,7 +218,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         system_prompt: input.systemPrompt,
         provider: input.provider,
         model: input.model,
-        skill_ids: input.skillIds
+        skill_ids: input.skillIds,
+        sap_environment_id: input.sapEnvironmentId,
+        sap_environment_label: input.sapEnvironmentLabel
       })
       .select('id, title, project_id, agent_name, updated_at')
       .single()
@@ -253,7 +259,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       systemPrompt: data.system_prompt,
       provider: data.provider,
       model: data.model,
-      skillIds: data.skill_ids ?? []
+      skillIds: data.skill_ids ?? [],
+      sapEnvironmentId: data.sap_environment_id ?? null,
+      sapEnvironmentLabel: data.sap_environment_label ?? null
     }
   },
 
@@ -392,7 +400,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       return {
-        recentChats: projectId ? withoutChat(state.recentChats) : [summary, ...withoutChat(state.recentChats)],
+        recentChats: projectId
+          ? withoutChat(state.recentChats)
+          : [summary, ...withoutChat(state.recentChats)],
         projectChats: nextProjectChats
       }
     })

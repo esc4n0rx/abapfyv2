@@ -17,7 +17,7 @@
   border: 1px solid var(--color-hairline-strong);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-card);
   animation: import-skill-modal-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -98,7 +98,7 @@
 .import-skill-field input[type='text']:focus,
 .import-skill-field textarea:focus {
   border-color: var(--color-hairline-strong);
-  box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-focus) 45%, transparent);
 }
 
 .import-skill-file-input {

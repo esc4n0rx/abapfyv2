@@ -1,7 +1,8 @@
 # Abapfy
 
 Cliente desktop (Electron + React + TypeScript) de chat com ferramentas voltadas para o
-ecossistema SAP/ABAP. Windows e macOS, dark mode padrão, autenticação e persistência via
+ecossistema SAP/ABAP. Windows e macOS, SAP Morning Horizon claro como tema padrão,
+autenticação e persistência via
 Supabase.
 
 A identidade visual do produto está definida em [`DESIGN.md`](./DESIGN.md) — todo componente
@@ -198,9 +199,9 @@ ignorados de propósito.
 Aberto pelo menu do usuário na sidebar (ou clicando em "Nenhuma chave de IA configurada" no
 seletor de modelo). As preferências são persistidas no Supabase:
 
-- **Geral** — 4 temas (Linear, Emerald, Amber, Crimson), todos derivados da mesma escala de
-  superfícies escuras do `DESIGN.md`, trocando apenas o acento cromático. Aplicado
-  imediatamente via `data-theme` + CSS custom properties (`lib/themes.ts`).
+- **Geral** — temas SAP Morning Horizon (padrão claro), Evening Horizon, Quartz Light/Dark e
+  Horizon de alto contraste claro/escuro. Aplicação imediata via `data-theme`, `color-scheme`
+  e CSS custom properties (`lib/themes.ts`), conforme o contrato de `DESIGN.md`.
 - **Inteligência Artificial** — chave de API por provedor (OpenAI, Gemini, Claude), com link
   para onde gerá-la, e seleção do modelo padrão entre os provedores configurados
   (`lib/aiProviders.ts` traz o catálogo de modelos atual de cada um).
@@ -281,6 +282,29 @@ chat com o badge do projeto no composer (acima do textarea, estilo do `image.png
 referência); um chat solto (fora de projeto) não mostra badge. Na sidebar, "Projetos" lista
 os projetos recentes e, ao clicar em um, expande os sub-chats daquele projeto
 (`chatStore.loadProjectChats`).
+
+Cada projeto também possui uma **Base de conhecimento**. O usuário pode carregar PDF, DOCX,
+texto, código ABAP/CDS e outros formatos suportados, informando categoria e versão. O conteúdo
+é dividido em trechos e indexado semanticamente com `text-embedding-3-small` quando há uma
+chave OpenAI; sem ela, permanece disponível por busca textual. Antes da resposta, chats do
+projeto recuperam as evidências relevantes via `pgvector`/RPC com RLS e injetam documento,
+versão, atualização, trecho e confiança no contexto do agente. A resposta deve listar somente
+as fontes realmente utilizadas.
+
+### Ambiente SAP no chat
+
+O composer possui um seletor de produto/release com SAP ERP 6.0 EHP6/EHP7/EHP8, principais
+releases S/4HANA, S/4HANA Cloud Public Edition e BTP ABAP Environment. A escolha é fixada na
+primeira mensagem, persistida no chat e enviada ao roteador e ao agente para adaptar sintaxe,
+APIs, extensibilidade e recomendações à versão correta.
+
+### Kanban avançado
+
+O atalho "Tarefas" oferece quadro com colunas configuráveis e visão calendário. Cards aceitam
+labels, módulo SAP, responsável, projeto/chat, dependências, horas estimadas/realizadas,
+lembrete e recorrência. Concluir uma tarefa recorrente cria a próxima ocorrência. O assistente
+de IA pode preencher o card e sugerir subtarefas, que só são aplicadas após confirmação do
+usuário.
 
 ### Persistência de chats
 

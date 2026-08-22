@@ -1,24 +1,24 @@
 :root {
   /* Colors — see DESIGN.md */
-  --color-primary: #5e6ad2;
+  --color-primary: #0070f2;
   --color-on-primary: #ffffff;
-  --color-primary-hover: #828fff;
-  --color-primary-focus: #5e69d1;
+  --color-primary-hover: #0057d2;
+  --color-primary-focus: #0057d2;
 
-  --color-ink: #f7f8f8;
-  --color-ink-muted: #d0d6e0;
-  --color-ink-subtle: #8a8f98;
-  --color-ink-tertiary: #62666d;
+  --color-ink: #1d2d3e;
+  --color-ink-muted: #475e75;
+  --color-ink-subtle: #5b738b;
+  --color-ink-tertiary: #758ca4;
 
-  --color-canvas: #181818;
-  --color-surface-1: #202020;
-  --color-surface-2: #242424;
-  --color-surface-3: #2b2b2b;
-  --color-surface-4: #313131;
+  --color-canvas: #f5f6f7;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f7f8fa;
+  --color-surface-3: #eef1f4;
+  --color-surface-4: #e5eaf0;
 
-  --color-hairline: #2f2f2f;
-  --color-hairline-strong: #3d3d3d;
-  --color-hairline-tertiary: #4a4a4a;
+  --color-hairline: #d9dfe6;
+  --color-hairline-strong: #bcc7d2;
+  --color-hairline-tertiary: #899bad;
 
   --color-inverse-canvas: #ffffff;
   --color-inverse-surface-1: #f5f6f6;
@@ -26,9 +26,12 @@
   --color-inverse-ink: #000000;
 
   --color-brand-secure: #7a7fad;
-  --color-semantic-success: #27a644;
-  --color-semantic-danger: #e5484d;
-  --color-semantic-overlay: rgba(0, 0, 0, 0.6);
+  --color-semantic-success: #188918;
+  --color-semantic-danger: #aa0808;
+  --color-semantic-warning: #e76500;
+  --color-semantic-info: #0070f2;
+  --color-semantic-overlay: rgba(34, 53, 72, 0.42);
+  --shadow-card: 0 0.125rem 0.5rem rgba(34, 53, 72, 0.12);
 
   /* Typography — native "Apple-style" system stack: San Francisco on macOS,
      Segoe UI Variable (closest metric/shape match) on Windows 11, sane fallbacks elsewhere. */

@@ -13,5 +13,5 @@
 
 .new-project-select:focus {
   border-color: var(--color-hairline-strong);
-  box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-focus) 45%, transparent);
 }

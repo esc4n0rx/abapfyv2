@@ -418,6 +418,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.home-environment-select .home-agent-trigger {
+  max-width: 230px;
+}
+
+.home-environment-menu {
+  width: 330px;
+  max-height: 360px;
+  overflow-y: auto;
+}
 .home-agent-trigger:hover:not(:disabled) {
   background: var(--color-surface-3);
 }

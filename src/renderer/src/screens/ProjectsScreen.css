@@ -5,3 +5,13 @@
 .project-card-open {
   margin-top: 4px;
 }
+.project-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.project-card-actions .project-card-open {
+  margin-top: 0;
+}

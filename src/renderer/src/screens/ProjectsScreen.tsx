@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { FolderKanban, MessageSquarePlus, Plus } from 'lucide-react'
+import { BookOpen, FolderKanban, MessageSquarePlus, Plus } from 'lucide-react'
 import { NewProjectModal } from '@renderer/components/NewProjectModal'
 import { useChatStore, type ProjectSummary } from '@renderer/store/chatStore'
 import { useAgentsStore } from '@renderer/store/agentsStore'
+import { ProjectKnowledgeModal } from '@renderer/components/ProjectKnowledgeModal'
 import './SkillsScreen.css'
 import './ProjectsScreen.css'
 
@@ -12,6 +13,7 @@ interface ProjectsScreenProps {
 
 export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps): JSX.Element {
   const [createOpen, setCreateOpen] = useState(false)
+  const [knowledgeProject, setKnowledgeProject] = useState<ProjectSummary | null>(null)
 
   const { projects, loaded, load, createProject } = useChatStore((state) => ({
     projects: state.projects,
@@ -76,14 +78,22 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps): JSX.Elem
 
               {project.description && <p className="skill-card-summary">{project.description}</p>}
 
-              <button
-                type="button"
-                className="agent-card-action project-card-open"
-                onClick={() => onOpenProject(project)}
-              >
-                <MessageSquarePlus size={13} strokeWidth={1.75} />
-                Novo chat no projeto
-              </button>
+              <div className="project-card-actions">
+                <button
+                  type="button"
+                  className="agent-card-action project-card-open"
+                  onClick={() => onOpenProject(project)}
+                >
+                  <MessageSquarePlus size={13} strokeWidth={1.75} /> Novo chat
+                </button>
+                <button
+                  type="button"
+                  className="agent-card-action project-card-open"
+                  onClick={() => setKnowledgeProject(project)}
+                >
+                  <BookOpen size={13} strokeWidth={1.75} /> Conhecimento
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -94,6 +104,7 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps): JSX.Elem
         onClose={() => setCreateOpen(false)}
         onCreate={handleCreate}
       />
+      <ProjectKnowledgeModal project={knowledgeProject} onClose={() => setKnowledgeProject(null)} />
     </div>
   )
 }

@@ -4,6 +4,21 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.0] - 2026-08-22
+
+### Adicionado
+
+- Base de conhecimento por projeto com documentos versionados, recuperação semântica via
+  `pgvector`, fallback textual, RLS e fontes com confiança no contexto do agente.
+- Seletor de ambiente SAP no composer, persistido por chat e enviado ao roteador e ao agente.
+- Kanban avançado com colunas configuráveis, calendário, labels, módulo, responsável,
+  projeto/chat, dependências, esforço, lembretes, recorrência e criação assistida por IA.
+
+### Alterado
+
+- Interface adota SAP Morning Horizon claro como padrão e oferece Evening Horizon, Quartz e
+  variantes de alto contraste nas configurações.
+
 ## [0.2.1] - 2026-08-22
 
 ### Corrigido

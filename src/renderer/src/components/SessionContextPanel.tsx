@@ -1,10 +1,11 @@
-import { Bot, FileText, Plug, Sparkles, X } from 'lucide-react'
+import { Bot, FileText, Plug, ServerCog, Sparkles, X } from 'lucide-react'
 
 interface SessionContextPanelProps {
   agentName: string | null
   files: string[]
   skills: string[]
   mcps: string[]
+  environment: string
   onClose: () => void
 }
 
@@ -46,6 +47,7 @@ export function SessionContextPanel({
   files,
   skills,
   mcps,
+  environment,
   onClose
 }: SessionContextPanelProps): JSX.Element {
   return (
@@ -64,6 +66,12 @@ export function SessionContextPanel({
         title="Agente"
         items={agentName ? [agentName] : []}
         empty="Seleção automática pendente."
+      />
+      <ContextSection
+        icon={ServerCog}
+        title="Ambiente SAP"
+        items={[environment]}
+        empty="Não definido"
       />
       <ContextSection
         icon={FileText}

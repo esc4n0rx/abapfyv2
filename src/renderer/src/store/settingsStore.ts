@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '@renderer/lib/supabaseClient'
 import { useAuthStore } from '@renderer/store/authStore'
-import { applyTheme, DEFAULT_THEME_ID } from '@renderer/lib/themes'
+import { applyTheme, DEFAULT_THEME_ID, getTheme } from '@renderer/lib/themes'
 import type { AiProviderId } from '@renderer/lib/aiProviders'
 
 interface ApiKeyStatus {
@@ -68,7 +68,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       apiKeys[provider] = { configured: true, updatedAt: row.updated_at }
     })
 
-    const theme = settingsRow?.theme ?? DEFAULT_THEME_ID
+    const theme = getTheme(settingsRow?.theme).id
     applyTheme(theme)
 
     set({
