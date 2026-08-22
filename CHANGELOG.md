@@ -4,6 +4,13 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.2.1] - 2026-08-22
+
+### Corrigido
+
+- Inclui `cross-spawn` como dependência direta do aplicativo para impedir a falha `ERR_MODULE_NOT_FOUND` ao iniciar o processo principal após a instalação.
+- Publica releases geradas por tag diretamente como release final do GitHub, em vez de deixá-las como rascunho invisível ao atualizador.
+
 ## [0.2.0] - 2026-08-22
 
 ### Adicionado
