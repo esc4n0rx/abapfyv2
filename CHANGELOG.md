@@ -4,6 +4,15 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.2] - 2026-08-28
+
+### Corrigido
+
+- Impede que o instalador atualize apenas o registro do Windows enquanto processos de uma
+  versão anterior ainda mantêm `abapfy.exe` e `app.asar` bloqueados.
+- Adota o instalador assistido da versão legacy, permitindo confirmar o diretório e exibindo
+  uma orientação clara para fechar o Abapfy antes de substituir os arquivos.
+
 ## [0.3.1] - 2026-08-28
 
 ### Corrigido
