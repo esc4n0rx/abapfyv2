@@ -4,6 +4,14 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.3] - 2026-08-28
+
+### Corrigido
+
+- Incorpora todas as dependências JavaScript do processo principal ao bundle, eliminando
+  falhas sequenciais de módulos transitivos ausentes em instalações geradas com pnpm,
+  incluindo `cross-spawn` e `fs-extra`.
+
 ## [0.3.2] - 2026-08-28
 
 ### Corrigido
