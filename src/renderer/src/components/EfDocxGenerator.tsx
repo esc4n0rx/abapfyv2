@@ -43,7 +43,9 @@ export function EfDocxGenerator({ data }: EfDocxGeneratorProps): JSX.Element {
     const anchor = document.createElement('a')
     anchor.href = fileUrl
     anchor.download = efDocxFileName(data)
+    document.body.appendChild(anchor)
     anchor.click()
+    anchor.remove()
   }
 
   return (

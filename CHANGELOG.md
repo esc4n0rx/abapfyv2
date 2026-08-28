@@ -4,6 +4,16 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.1] - 2026-08-28
+
+### Corrigido
+
+- Incorpora o runtime do cliente MCP ao processo principal para impedir a falha
+  `ERR_MODULE_NOT_FOUND` de `cross-spawn` ao abrir o aplicativo instalado.
+- O Agente de Especificação Funcional volta a gerar o Word a partir do modelo base,
+  inclusive quando a resposta do provedor vier em Markdown em vez do JSON esperado.
+- Preenche o campo de consultor e preserva o espaçamento do texto justificado no documento EF.
+
 ## [0.3.0] - 2026-08-22
 
 ### Adicionado

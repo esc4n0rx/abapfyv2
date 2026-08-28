@@ -7,7 +7,7 @@ import { EstimateScenarioCards } from './EstimateScenarioCards'
 import { ClarifyQuestion } from './ClarifyQuestion'
 import { formatDurationMs, formatTokenCount } from '@renderer/lib/format'
 import { parseMessageAttachments } from '@renderer/lib/attachments'
-import { parseEfDocxData } from '@renderer/lib/efDocx'
+import { parseEfDocxResponse } from '@renderer/lib/efDocx'
 import { parseStructuredJson, extractSoleJsonBlock } from '@renderer/lib/structuredResponse'
 import { parseEstimateData } from '@renderer/lib/estimateCards'
 import { parseClarify } from '@renderer/lib/clarify'
@@ -59,6 +59,7 @@ function ToolActivityBadges({ items }: { items: ToolActivityItem[] }): JSX.Eleme
 
 interface ChatMessageItemProps {
   message: UiMessage
+  efDocumentMode?: boolean
   onClarifyAnswer?: (text: string) => void
   clarifyDisabled?: boolean
 }
@@ -71,6 +72,7 @@ interface ChatMessageItemProps {
 // prop realmente mudou re-renderiza.
 export const ChatMessageItem = memo(function ChatMessageItem({
   message,
+  efDocumentMode = false,
   onClarifyAnswer,
   clarifyDisabled
 }: ChatMessageItemProps): JSX.Element {
@@ -86,7 +88,9 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   // Depois EF (gera .docx); qualquer outro objeto JSON cai no renderizador genérico.
   const clarify = !isUser && !message.streaming ? parseClarify(message.content) : null
   const efDocx =
-    !isUser && !message.streaming && !clarify ? parseEfDocxData(message.content.trim()) : null
+    !isUser && !message.streaming && !clarify
+      ? parseEfDocxResponse(message.content, efDocumentMode)
+      : null
   const estimate =
     !isUser && !message.streaming && !clarify && !efDocx
       ? parseEstimateData(extractSoleJsonBlock(message.content))

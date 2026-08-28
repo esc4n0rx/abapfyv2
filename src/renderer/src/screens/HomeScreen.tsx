@@ -38,6 +38,7 @@ import { useSkillsStore } from '@renderer/store/skillsStore'
 import { useMcpStore } from '@renderer/store/mcpStore'
 import { fetchParametrosContextBlock } from '@renderer/store/estimativaParametrosStore'
 import { parseClarify } from '@renderer/lib/clarify'
+import { EF_DOCX_OUTPUT_CONTRACT } from '@renderer/lib/efDocx'
 import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
 import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
 import { loadSkillContent } from '@renderer/lib/skillContent'
@@ -556,6 +557,9 @@ export function HomeScreen(): JSX.Element {
     const startTime = performance.now()
     let runtimePrompt = prompt
     runtimePrompt = `${runtimePrompt ?? ''}\n\n---\n\n${environmentContext}`
+    if (agent?.source === 'default' && agent.id === 'ef_consultant') {
+      runtimePrompt = `${runtimePrompt}\n\n---\n\n${EF_DOCX_OUTPUT_CONTRACT}`
+    }
     if (agent?.source === 'default' && agent.id === 'effort_estimator' && user?.id) {
       const parametrosBlock = await fetchParametrosContextBlock(user.id)
       runtimePrompt = `${runtimePrompt}\n\n---\n\n## Parâmetros atuais desta solicitação\n\n${parametrosBlock}`
@@ -807,6 +811,9 @@ export function HomeScreen(): JSX.Element {
                   <ChatMessageItem
                     key={message.id}
                     message={message}
+                    efDocumentMode={
+                      activeAgent?.source === 'default' && activeAgent.id === 'ef_consultant'
+                    }
                     onClarifyAnswer={handleClarifyAnswer}
                     clarifyDisabled={isStreaming}
                   />
