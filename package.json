@@ -1,6 +1,6 @@
 {
   "name": "abapfy",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Abapfy — cliente desktop de chat com ferramentas para o ecossistema SAP/ABAP",
   "main": "./out/main/index.js",
   "author": "Abapfy",
@@ -49,7 +49,8 @@
     "@typescript-eslint/parser": "^8.8.0",
     "@vitejs/plugin-react": "^4.3.2",
     "electron": "^32.1.2",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.9.0",
+    "electron-builder-squirrel-windows": "^26.15.3",
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.1",

@@ -4,6 +4,16 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.4] - 2026-08-31
+
+### Corrigido
+
+- Atualiza o gerador NSIS para eliminar a violação de acesso em `System.dll` que encerrava
+  instalações por usuário logo após a escolha de "somente para mim" no Windows.
+- Restringe o pacote desktop aos artefatos compilados e recursos necessários, evitando a
+  inclusão de caches, arquivos de ambiente, fontes auxiliares e dependências já incorporadas
+  ao bundle do processo principal.
+
 ## [0.3.3] - 2026-08-28
 
 ### Corrigido

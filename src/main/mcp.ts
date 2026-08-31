@@ -108,7 +108,7 @@ async function connect(config: McpServerConfig): Promise<Client> {
     clients.delete(config.id)
   }
 
-  const client = new Client({ name: 'abapfy', version: '0.3.3' })
+  const client = new Client({ name: 'abapfy', version: '0.3.4' })
   const transport =
     config.transport === 'streamable_http'
       ? new StreamableHTTPClientTransport(new URL(config.url!))
