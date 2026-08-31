@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
 import { setupAutoUpdater } from './updater'
 import {
   callMcpTool,
@@ -17,6 +17,8 @@ import {
 
 let mainWindow: BrowserWindow | null = null
 const approvedStdioConfigs = new Set<string>()
+const mainDirectory = dirname(fileURLToPath(import.meta.url))
+const icon = join(mainDirectory, '../../resources/icon.png')
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -32,7 +34,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     icon,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs'),
+      preload: join(mainDirectory, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true
     }
@@ -58,7 +60,7 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(mainDirectory, '../renderer/index.html'))
   }
 }
 

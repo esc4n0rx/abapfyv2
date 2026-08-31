@@ -4,6 +4,13 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.5] - 2026-08-31
+
+### Corrigido
+
+- Substitui os usos de `__dirname` no processo principal por caminhos derivados de
+  `import.meta.url`, permitindo iniciar corretamente o bundle ES module instalado.
+
 ## [0.3.4] - 2026-08-31
 
 ### Corrigido
