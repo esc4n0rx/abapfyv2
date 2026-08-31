@@ -1,6 +1,6 @@
 {
   "name": "abapfy",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Abapfy — cliente desktop de chat com ferramentas para o ecossistema SAP/ABAP",
   "main": "./out/main/index.js",
   "author": "Abapfy",
@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "validate:build-env": "node scripts/validate-build-env.mjs",
+    "build": "pnpm validate:build-env && electron-vite build",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",

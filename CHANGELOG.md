@@ -4,6 +4,15 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.6] - 2026-08-31
+
+### Corrigido
+
+- Injeta a configuração pública do Supabase no renderer durante as builds de release,
+  evitando que o aplicativo instalado abra em uma janela branca.
+- Interrompe a compilação quando a URL ou a chave anônima do Supabase não estiverem
+  configuradas, impedindo a publicação de instaladores inválidos.
+
 ## [0.3.5] - 2026-08-31
 
 ### Corrigido
