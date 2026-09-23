@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { X } from 'lucide-react'
 import { useAgentsStore } from '@renderer/store/agentsStore'
 import type { AgentSource } from '@renderer/store/agentsStore'
+import { useClientsStore } from '@renderer/store/clientsStore'
 import './ImportSkillModal.css'
 import './NewProjectModal.css'
 
@@ -10,6 +11,7 @@ interface NewProjectModalProps {
   onClose: () => void
   onCreate: (input: {
     name: string
+    clientId: string
     description: string
     context: string
     defaultAgentSource: AgentSource | null
@@ -23,6 +25,8 @@ export function NewProjectModal({
   onCreate
 }: NewProjectModalProps): JSX.Element | null {
   const agents = useAgentsStore((state) => state.agents)
+  const clients = useClientsStore((state) => state.clients)
+  const [clientId, setClientId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [context, setContext] = useState('')
@@ -41,13 +45,14 @@ export function NewProjectModal({
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault()
-    if (!name.trim() || submitting) return
+    if (!name.trim() || !clientId || submitting) return
 
     const [source, id] = agentKey ? (agentKey.split('::') as [AgentSource, string]) : [null, null]
 
     setSubmitting(true)
     await onCreate({
       name,
+      clientId,
       description,
       context,
       defaultAgentSource: source,
@@ -77,6 +82,7 @@ export function NewProjectModal({
         </p>
 
         <form className="import-skill-form" onSubmit={handleSubmit}>
+          <div className="import-skill-field"><label htmlFor="project-client">Cliente</label><select id="project-client" className="new-project-select" value={clientId} required onChange={(event) => setClientId(event.target.value)}><option value="">Selecione um cliente</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></div>
           <div className="import-skill-field">
             <label htmlFor="project-name">Nome</label>
             <input
@@ -131,7 +137,7 @@ export function NewProjectModal({
           <button
             type="submit"
             className="import-skill-submit"
-            disabled={!name.trim() || submitting}
+            disabled={!name.trim() || !clientId || submitting}
           >
             {submitting ? 'Criando…' : 'Criar projeto'}
           </button>

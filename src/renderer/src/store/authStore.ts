@@ -9,6 +9,8 @@ export interface Profile {
   empresa: string | null
 }
 
+export type AppRole = 'MASTER' | 'ADMIN' | null
+
 export interface SignUpPayload {
   nome: string
   email: string
@@ -27,12 +29,14 @@ interface AuthState {
   user: User | null
   session: Session | null
   profile: Profile | null
+  role: AppRole
   error: string | null
   init: () => Promise<void>
   signIn: (payload: SignInPayload) => Promise<void>
   signUp: (payload: SignUpPayload) => Promise<void>
   signOut: () => Promise<void>
   clearError: () => void
+  refreshRole: () => Promise<void>
 }
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -41,11 +45,17 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   return data as Profile
 }
 
+async function fetchRole(userId: string): Promise<AppRole> {
+  const { data } = await supabase.from('app_roles').select('role').eq('user_id', userId).maybeSingle()
+  return data?.role === 'MASTER' || data?.role === 'ADMIN' ? data.role : null
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   status: 'idle',
   user: null,
   session: null,
   profile: null,
+  role: null,
   error: null,
 
   init: async () => {
@@ -55,18 +65,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     } = await supabase.auth.getSession()
 
     if (session?.user) {
-      const profile = await fetchProfile(session.user.id)
-      set({ status: 'authenticated', session, user: session.user, profile })
+      const [profile, role] = await Promise.all([fetchProfile(session.user.id), fetchRole(session.user.id)])
+      set({ status: 'authenticated', session, user: session.user, profile, role })
     } else {
-      set({ status: 'unauthenticated', session: null, user: null, profile: null })
+      set({ status: 'unauthenticated', session: null, user: null, profile: null, role: null })
     }
 
     supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (nextSession?.user) {
-        const profile = await fetchProfile(nextSession.user.id)
-        set({ status: 'authenticated', session: nextSession, user: nextSession.user, profile })
+        const [profile, role] = await Promise.all([fetchProfile(nextSession.user.id), fetchRole(nextSession.user.id)])
+        set({ status: 'authenticated', session: nextSession, user: nextSession.user, profile, role })
       } else {
-        set({ status: 'unauthenticated', session: null, user: null, profile: null })
+        set({ status: 'unauthenticated', session: null, user: null, profile: null, role: null })
       }
     })
   },
@@ -106,8 +116,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut()
-    set({ status: 'unauthenticated', user: null, session: null, profile: null })
+    set({ status: 'unauthenticated', user: null, session: null, profile: null, role: null })
   },
 
-  clearError: () => set({ error: null })
+  clearError: () => set({ error: null }),
+  refreshRole: async () => {
+    const userId = useAuthStore.getState().user?.id
+    if (userId) set({ role: await fetchRole(userId) })
+  }
 }))

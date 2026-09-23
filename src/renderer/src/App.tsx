@@ -13,6 +13,7 @@ import { useChatStore } from '@renderer/store/chatStore'
 import { useUsageStore } from '@renderer/store/usageStore'
 import { useMcpStore } from '@renderer/store/mcpStore'
 import { useTasksStore } from '@renderer/store/tasksStore'
+import { useClientsStore } from '@renderer/store/clientsStore'
 
 function App(): JSX.Element {
   const init = useAuthStore((state) => state.init)
@@ -34,6 +35,7 @@ function App(): JSX.Element {
     resetChats: state.reset
   }))
   const resetUsage = useUsageStore((state) => state.reset)
+  const resetClients = useClientsStore((state) => state.reset)
   const { loadMcp, resetMcp } = useMcpStore((state) => ({
     loadMcp: state.load,
     resetMcp: state.reset
@@ -63,6 +65,7 @@ function App(): JSX.Element {
       resetUsage()
       resetMcp()
       resetTasks()
+      resetClients()
     }
   }, [
     status,
@@ -78,7 +81,8 @@ function App(): JSX.Element {
     loadMcp,
     resetMcp,
     loadTasks,
-    resetTasks
+    resetTasks,
+    resetClients
   ])
 
   return (

@@ -183,12 +183,12 @@
   background: var(--color-surface-4);
 }
 .task-priority-medium {
-  color: #b9bde4;
-  background: rgba(94, 106, 210, 0.16);
+  color: var(--color-semantic-info);
+  background: color-mix(in srgb, var(--color-semantic-info) 12%, var(--color-surface-1));
 }
 .task-priority-high {
-  color: #f2a1a4;
-  background: rgba(229, 72, 77, 0.14);
+  color: var(--color-semantic-danger);
+  background: color-mix(in srgb, var(--color-semantic-danger) 12%, var(--color-surface-1));
 }
 .task-card-title {
   margin: 9px 0 0;

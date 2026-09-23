@@ -26,12 +26,12 @@
 }
 
 .ef-docx-icon-ready {
-  background: rgba(39, 166, 68, 0.12);
+  background: color-mix(in srgb, var(--color-semantic-success) 12%, var(--color-surface-1));
   color: var(--color-semantic-success);
 }
 
 .ef-docx-icon-error {
-  background: rgba(229, 72, 77, 0.12);
+  background: color-mix(in srgb, var(--color-semantic-danger) 12%, var(--color-surface-1));
   color: var(--color-semantic-danger);
 }
 

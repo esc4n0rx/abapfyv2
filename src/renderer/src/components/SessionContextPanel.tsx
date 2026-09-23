@@ -1,4 +1,4 @@
-import { Bot, FileText, Plug, ServerCog, Sparkles, X } from 'lucide-react'
+import { Bot, Building2, FileText, Plug, Sparkles, X } from 'lucide-react'
 
 interface SessionContextPanelProps {
   agentName: string | null
@@ -68,8 +68,8 @@ export function SessionContextPanel({
         empty="Seleção automática pendente."
       />
       <ContextSection
-        icon={ServerCog}
-        title="Ambiente SAP"
+        icon={Building2}
+        title="Cliente e módulo"
         items={[environment]}
         empty="Não definido"
       />

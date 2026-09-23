@@ -5,12 +5,13 @@ import {
   Bot,
   ChevronDown,
   FileText,
+  FolderOpen,
   FolderKanban,
+  Building2,
   Layers3,
   Loader2,
   Mic,
   Paperclip,
-  ServerCog,
   Sparkles,
   Square,
   X,
@@ -27,12 +28,17 @@ import {
 import { SkillsScreen } from '@renderer/screens/SkillsScreen'
 import { AgentsScreen } from '@renderer/screens/AgentsScreen'
 import { ProjectsScreen } from '@renderer/screens/ProjectsScreen'
+import { ClientsScreen } from '@renderer/screens/ClientsScreen'
 import { TasksScreen } from '@renderer/screens/TasksScreen'
 import { SessionContextPanel } from '@renderer/components/SessionContextPanel'
 import { useAuthStore } from '@renderer/store/authStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
 import { useAgentsStore, type AgentSource } from '@renderer/store/agentsStore'
 import { useChatStore, type ProjectSummary } from '@renderer/store/chatStore'
+import { useClientsStore } from '@renderer/store/clientsStore'
+import { supabase } from '@renderer/lib/supabaseClient'
+import { folderPath, loadClientFolders, loadFolderReference, type DriveFolder } from '@renderer/lib/clientFolderContext'
+import { presenceLabel, useWorkPresence, type WorkScope } from '@renderer/lib/workPresence'
 import { useChatRuntimeStore } from '@renderer/store/chatRuntimeStore'
 import { useSkillsStore } from '@renderer/store/skillsStore'
 import { useMcpStore } from '@renderer/store/mcpStore'
@@ -43,12 +49,6 @@ import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
 import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
 import { loadSkillContent } from '@renderer/lib/skillContent'
 import { buildKnowledgePrompt, searchProjectKnowledge } from '@renderer/lib/projectKnowledge'
-import {
-  buildSapEnvironmentPrompt,
-  DEFAULT_SAP_ENVIRONMENT_ID,
-  getSapEnvironment,
-  SAP_ENVIRONMENTS
-} from '@renderer/lib/sapEnvironments'
 import {
   CLAUDE_EFFORT_LABELS_PT,
   CLAUDE_EFFORT_LEVELS,
@@ -88,14 +88,21 @@ interface ActiveAgent {
   name: string
 }
 
-type View = 'chat' | 'skills' | 'agents' | 'projects' | 'tasks'
+type View = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks'
 
 export function HomeScreen(): JSX.Element {
   const [view, setView] = useState<View>('chat')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
-  const [environmentMenuOpen, setEnvironmentMenuOpen] = useState(false)
+  const [clientMenuOpen, setClientMenuOpen] = useState(false)
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [driveFolders, setDriveFolders] = useState<DriveFolder[]>([])
+  const [folderLoadError, setFolderLoadError] = useState<string | null>(null)
+  const [folderNotice, setFolderNotice] = useState<string | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [driveActivity, setDriveActivity] = useState<WorkScope | null>(null)
   const [sessionPanelOpen, setSessionPanelOpen] = useState(false)
   const [input, setInput] = useState('')
   const [draftMessages, setDraftMessages] = useState<UiMessage[]>([])
@@ -108,11 +115,13 @@ export function HomeScreen(): JSX.Element {
   const [currentProject, setCurrentProject] = useState<ProjectSummary | null>(null)
   const [sessionSkillNames, setSessionSkillNames] = useState<string[]>([])
   const [attachments, setAttachments] = useState<AttachmentFile[]>([])
-  const [sapEnvironmentId, setSapEnvironmentId] = useState(DEFAULT_SAP_ENVIRONMENT_ID)
+  const [currentClientId, setCurrentClientId] = useState<string | null>(null)
+  const [currentModuleId, setCurrentModuleId] = useState<string | null>(null)
 
   const modelMenuRef = useRef<HTMLDivElement>(null)
   const agentMenuRef = useRef<HTMLDivElement>(null)
-  const environmentMenuRef = useRef<HTMLDivElement>(null)
+  const clientMenuRef = useRef<HTMLDivElement>(null)
+  const attachmentMenuRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -133,6 +142,26 @@ export function HomeScreen(): JSX.Element {
 
   const profile = useAuthStore((state) => state.profile)
   const user = useAuthStore((state) => state.user)
+  const chatScope: WorkScope | null = currentClientId && currentModuleId && (currentChatId || (view === 'chat' && (selectedFolderId || input.trim() || attachments.length > 0)))
+    ? { clientId: currentClientId, moduleId: currentModuleId, folderId: selectedFolderId, chatId: currentChatId }
+    : null
+  const { presence, error: presenceError } = useWorkPresence(user?.id ?? null, chatScope, view === 'clients' ? driveActivity : null)
+  const { clients, modules, load: loadClients } = useClientsStore()
+  useEffect(() => { if (user) void loadClients() }, [user, loadClients])
+  useEffect(() => {
+    if (!currentModuleId) { setDriveFolders([]); return }
+    let active = true
+    void loadClientFolders(currentModuleId)
+      .then((folders) => { if (active) { setDriveFolders(folders); setFolderLoadError(null) } })
+      .catch((cause: Error) => { if (active) setFolderLoadError(cause.message) })
+    return () => { active = false }
+  }, [currentModuleId, folderPickerOpen])
+  useEffect(() => {
+    if (!currentChatId && !currentClientId && clients.length && modules.length) {
+      setCurrentClientId(modules[0].clientId)
+      setCurrentModuleId(modules[0].id)
+    }
+  }, [clients, modules, currentChatId, currentClientId])
   const { apiKeys, defaultProvider, defaultModel, setDefaultModel } = useSettingsStore((state) => ({
     apiKeys: state.apiKeys,
     defaultProvider: state.defaultProvider,
@@ -172,10 +201,14 @@ export function HomeScreen(): JSX.Element {
         setAgentMenuOpen(false)
       }
       if (
-        environmentMenuRef.current &&
-        !environmentMenuRef.current.contains(event.target as Node)
+        clientMenuRef.current &&
+        !clientMenuRef.current.contains(event.target as Node)
       ) {
-        setEnvironmentMenuOpen(false)
+        setClientMenuOpen(false)
+      }
+      if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(event.target as Node)) {
+        setAttachmentMenuOpen(false)
+        setFolderPickerOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -212,20 +245,38 @@ export function HomeScreen(): JSX.Element {
     setSessionSkillNames([])
     setInput('')
     setAttachments([])
-    setSapEnvironmentId(DEFAULT_SAP_ENVIRONMENT_ID)
+    setCurrentClientId(null)
+    setCurrentModuleId(null)
+    setSelectedFolderId(null)
+    setFolderNotice(null)
     setSessionPanelOpen(false)
   }
 
   function handleNewSession(): void {
+    const previousFolderId = selectedFolderId
     setView('chat')
     setCurrentProject(null)
     resetSession()
+    if (currentClientId && currentModuleId) {
+      setCurrentClientId(currentClientId)
+      setCurrentModuleId(currentModuleId)
+      setSelectedFolderId(previousFolderId)
+    }
   }
 
   function handleOpenProjectForNewChat(project: ProjectSummary): void {
     setView('chat')
     setCurrentProject(project)
     resetSession()
+    setCurrentClientId(project.clientId)
+    setCurrentModuleId(modules.find((module) => module.clientId === project.clientId)?.id ?? null)
+  }
+
+  function handleClientNewChat(clientId: string, moduleId: string, folderId?: string | null): void {
+    handleNewSession()
+    setCurrentClientId(clientId)
+    setCurrentModuleId(moduleId)
+    setSelectedFolderId(folderId ?? null)
   }
 
   async function handleSelectChat(chatId: string): Promise<void> {
@@ -234,6 +285,8 @@ export function HomeScreen(): JSX.Element {
     setDraftMessages([])
     setInput('')
     setAttachments([])
+    setSelectedFolderId(null)
+    setFolderNotice(null)
     setSessionPanelOpen(false)
     setAgentMenuOpen(false)
 
@@ -250,7 +303,9 @@ export function HomeScreen(): JSX.Element {
           : null
       )
       setSystemPrompt(meta.systemPrompt)
-      setSapEnvironmentId(meta.sapEnvironmentId ?? DEFAULT_SAP_ENVIRONMENT_ID)
+      setCurrentClientId(meta.clientId)
+      setCurrentModuleId(meta.moduleId)
+      setSelectedFolderId(meta.folderId)
       setCurrentProject(
         meta.projectId ? (projects.find((p) => p.id === meta.projectId) ?? null) : null
       )
@@ -315,13 +370,25 @@ export function HomeScreen(): JSX.Element {
     setAttachments((prev) => prev.filter((attachment) => attachment.id !== id))
   }
 
+  async function selectDriveFolder(folderId: string | null): Promise<void> {
+    if (currentChatId) {
+      const { error } = await supabase.from('chats').update({ folder_id: folderId }).eq('id', currentChatId)
+      if (error) { setFolderLoadError(error.message); return }
+    }
+    setSelectedFolderId(folderId)
+    setFolderNotice(null)
+    setFolderPickerOpen(false)
+    setAttachmentMenuOpen(false)
+    setFolderLoadError(null)
+  }
+
   async function handleSend(overrideText?: string): Promise<void> {
     const rawText = (overrideText ?? input).trim()
     const readyAttachments = attachments.filter((attachment) => attachment.status === 'ready')
-    if ((!rawText && readyAttachments.length === 0) || isStreaming) return
+    if ((!rawText && readyAttachments.length === 0 && !selectedFolderId) || isStreaming) return
     if (attachments.some((attachment) => attachment.status === 'reading')) return
 
-    const text = rawText || '(sem mensagem — ver anexos)'
+    const text = rawText || (selectedFolderId ? 'Analise os arquivos da pasta selecionada.' : '(sem mensagem — ver anexos)')
     const rt = useChatRuntimeStore.getState()
 
     function pushLocalError(errorText: string): void {
@@ -341,6 +408,22 @@ export function HomeScreen(): JSX.Element {
       )
       return
     }
+    if (!currentClientId || !currentModuleId) {
+      pushLocalError('Selecione um cliente e módulo antes de iniciar a sessão.')
+      setClientMenuOpen(true)
+      return
+    }
+
+    let folderReference: Awaited<ReturnType<typeof loadFolderReference>> | null = null
+    if (selectedFolderId) {
+      try {
+        folderReference = await loadFolderReference(currentClientId, currentModuleId, selectedFolderId)
+        setFolderNotice(folderReference.limited ? 'Pasta grande: parte dos arquivos foi omitida do contexto desta mensagem.' : null)
+      } catch (cause) {
+        pushLocalError(`Não foi possível carregar a pasta do drive: ${(cause as Error).message}`)
+        return
+      }
+    }
 
     const apiKey = await fetchApiKey(user.id, defaultProvider)
     if (!apiKey) {
@@ -355,13 +438,14 @@ export function HomeScreen(): JSX.Element {
         content: attachment.content ?? ''
       }))
     )
-    const selectedSapEnvironment = getSapEnvironment(sapEnvironmentId)
-    const environmentContext = buildSapEnvironmentPrompt(selectedSapEnvironment)
-    const routingContent = `${fullContent.slice(0, 4000)}\n\n${environmentContext}`
+    const selectedClient = clients.find((item) => item.id === currentClientId)
+    const workbookContext = selectedClient?.workbookMd?.trim() || ''
+    const routingContent = workbookContext ? `${fullContent.slice(0, 4000)}\n\n${workbookContext}` : fullContent.slice(0, 4000)
 
     const history: ChatTurn[] = messages
       .filter((message) => !message.error)
       .map((message) => ({ role: message.role, content: message.content }))
+    if (folderReference) history.push({ role: 'user', content: folderReference.content })
     history.push({ role: 'user', content: fullContent })
 
     const userMessage: UiMessage = { id: createId(), role: 'user', content: fullContent }
@@ -462,7 +546,12 @@ export function HomeScreen(): JSX.Element {
       setSessionSkillNames(routedSkillNames)
       skillNamesForTurn = routedSkillNames
 
+      if (workbookContext) prompt = `${prompt ?? ''}\n\n---\n\n## Workbook do cliente ${selectedClient?.name}\n\n${workbookContext}`
+
       const newChatId = await createChat({
+        clientId: currentClientId,
+        moduleId: currentModuleId,
+        folderId: selectedFolderId,
         projectId: currentProject?.id ?? null,
         title: text.slice(0, 60),
         agentSource: agent?.source ?? null,
@@ -472,8 +561,8 @@ export function HomeScreen(): JSX.Element {
         provider: defaultProvider,
         model: defaultModel,
         skillIds,
-        sapEnvironmentId: selectedSapEnvironment.id,
-        sapEnvironmentLabel: selectedSapEnvironment.label
+        sapEnvironmentId: null,
+        sapEnvironmentLabel: null
       })
 
       if (!newChatId) {
@@ -556,7 +645,6 @@ export function HomeScreen(): JSX.Element {
     let iteration = 0
     const startTime = performance.now()
     let runtimePrompt = prompt
-    runtimePrompt = `${runtimePrompt ?? ''}\n\n---\n\n${environmentContext}`
     if (agent?.source === 'default' && agent.id === 'ef_consultant') {
       runtimePrompt = `${runtimePrompt}\n\n---\n\n${EF_DOCX_OUTPUT_CONTRACT}`
     }
@@ -724,7 +812,16 @@ export function HomeScreen(): JSX.Element {
   const agentSelectorLabel = currentChatId
     ? (activeAgent?.name ?? 'Automático')
     : (selectedAgent?.name ?? 'Automático')
-  const selectedSapEnvironment = getSapEnvironment(sapEnvironmentId)
+  const selectedClient = clients.find((client) => client.id === currentClientId)
+  const selectedModule = modules.find((module) => module.id === currentModuleId)
+  const selectedFolderName = selectedFolderId ? folderPath(selectedFolderId, driveFolders) : null
+  const folderWorkers = selectedFolderId
+    ? presence.filter((item) => item.clientId === currentClientId && item.moduleId === currentModuleId && item.folderId === selectedFolderId)
+    : []
+  const activeFolderLabel = presenceLabel(folderWorkers, user?.id ?? null)
+  const activeChatLabel = currentChatId
+    ? presenceLabel(presence.filter((item) => item.chatId === currentChatId), user?.id ?? null)
+    : null
 
   return (
     <div className="home-screen">
@@ -736,14 +833,17 @@ export function HomeScreen(): JSX.Element {
         onOpenSkills={() => setView('skills')}
         onOpenAgents={() => setView('agents')}
         onOpenProjects={() => setView('projects')}
+        onOpenClients={() => setView('clients')}
         onOpenTasks={() => setView('tasks')}
         onSelectChat={handleSelectChat}
         onChatRemoved={handleNewSession}
+        workPresence={presence}
       />
 
       {view === 'skills' && <SkillsScreen />}
       {view === 'agents' && <AgentsScreen />}
       {view === 'projects' && <ProjectsScreen onOpenProject={handleOpenProjectForNewChat} />}
+      {view === 'clients' && <ClientsScreen onNewChat={handleClientNewChat} onOpenChat={(id) => void handleSelectChat(id)} workPresence={presence} presenceError={presenceError} onActivityChange={setDriveActivity} />}
       {view === 'tasks' && <TasksScreen />}
 
       {view === 'chat' && (
@@ -768,7 +868,7 @@ export function HomeScreen(): JSX.Element {
               files={sessionFiles}
               skills={sessionSkillNames}
               mcps={sessionMcps}
-              environment={selectedSapEnvironment.label}
+              environment={selectedClient ? `${selectedClient.name} / ${selectedModule?.name ?? 'Módulo'}` : 'Nenhum cliente selecionado'}
               onClose={() => setSessionPanelOpen(false)}
             />
           )}
@@ -824,7 +924,7 @@ export function HomeScreen(): JSX.Element {
           </div>
 
           <div className="home-composer">
-            {(currentProject || attachments.length > 0) && (
+            {(currentProject || attachments.length > 0 || selectedFolderId || activeChatLabel || folderNotice) && (
               <div className="home-composer-badges">
                 {currentProject && (
                   <span className="home-project-badge">
@@ -832,6 +932,16 @@ export function HomeScreen(): JSX.Element {
                     {currentProject.name}
                   </span>
                 )}
+                {selectedFolderId && (
+                  <span className="home-attachment-chip home-drive-folder-chip" title={selectedFolderName ?? 'Pasta do drive'}>
+                    <FolderOpen size={12} />
+                    <span className="home-attachment-chip-name">{selectedFolderName || 'Pasta do drive'}</span>
+                    <button type="button" className="home-attachment-chip-remove" onClick={() => void selectDriveFolder(null)} aria-label="Remover pasta do contexto"><X size={10} /></button>
+                  </span>
+                )}
+                {activeFolderLabel && <span className="home-work-presence-badge">{activeFolderLabel}</span>}
+                {activeChatLabel && !activeFolderLabel && <span className="home-work-presence-badge">{activeChatLabel} nesta sessão</span>}
+                {folderNotice && <span className="home-folder-notice"><AlertCircle size={12} />{folderNotice}</span>}
                 {attachments.map((attachment) => (
                   <span
                     key={attachment.id}
@@ -874,7 +984,7 @@ export function HomeScreen(): JSX.Element {
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <div className="home-composer-toolbar">
+              <div className="home-composer-toolbar">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -883,14 +993,31 @@ export function HomeScreen(): JSX.Element {
                 accept=".txt,.md,.markdown,.json,.yaml,.yml,.xml,.csv,.log,.pdf,.docx,.abap,.cds,.dcl,.sql,.js,.jsx,.ts,.tsx,.py,.java,.cs,.c,.cpp,.h,.go,.rb,.php,.sh,.ps1,.html,.css,.scss"
                 onChange={(event) => handleFilesSelected(event.target.files)}
               />
-              <button
-                type="button"
-                className="home-composer-icon-btn"
-                title="Anexar arquivo (PDF, DOCX, TXT, código...)"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip size={16} strokeWidth={1.75} />
-              </button>
+              <div className="home-agent-select home-attachment-select" ref={attachmentMenuRef}>
+                <button type="button" className="home-composer-icon-btn" title="Anexar arquivo ou usar pasta do drive" onClick={() => { setAttachmentMenuOpen((open) => !open); setFolderPickerOpen(false) }}>
+                  <Paperclip size={16} strokeWidth={1.75} />
+                </button>
+                {attachmentMenuOpen && (
+                  <div className="home-agent-menu home-attachment-menu">
+                    <button type="button" className="home-agent-menu-item" onClick={() => { setAttachmentMenuOpen(false); fileInputRef.current?.click() }}><FileText size={15} /><span>Enviar arquivo local</span></button>
+                    <button type="button" className="home-agent-menu-item" disabled={!currentModuleId} onClick={() => { setAttachmentMenuOpen(false); setFolderPickerOpen(true) }}><FolderOpen size={15} /><span>Selecionar pasta do drive</span></button>
+                  </div>
+                )}
+                {folderPickerOpen && (
+                  <div className="home-agent-menu home-drive-folder-menu">
+                    <div className="home-drive-folder-heading"><strong>{selectedClient?.name} / {selectedModule?.name}</strong><button type="button" onClick={() => setFolderPickerOpen(false)} aria-label="Fechar seleção de pasta"><X size={14} /></button></div>
+                    {folderLoadError && <span className="home-client-empty">{folderLoadError}</span>}
+                    {driveFolders.map((folder) => {
+                      const workers = presence.filter((item) => item.clientId === currentClientId && item.moduleId === currentModuleId && item.folderId === folder.id)
+                      const label = presenceLabel(workers, user?.id ?? null)
+                      return <button key={folder.id} type="button" className={`home-agent-menu-item ${folder.id === selectedFolderId ? 'home-agent-menu-item-active' : ''}`} onClick={() => void selectDriveFolder(folder.id)}><FolderOpen size={14} /><span>{folderPath(folder.id, driveFolders)}</span>{label && <small>{label}</small>}</button>
+                    })}
+                    {driveFolders.length === 0 && !folderLoadError && <span className="home-client-empty">Nenhuma subpasta neste módulo.</span>}
+                    {selectedFolderId && <button type="button" className="home-agent-menu-item" onClick={() => void selectDriveFolder(null)}>Remover pasta selecionada</button>}
+                    {presenceError && <span className="home-client-empty">Status de trabalho indisponível.</span>}
+                  </div>
+                )}
+              </div>
 
               <div className="home-agent-select" ref={agentMenuRef}>
                 <button
@@ -941,38 +1068,26 @@ export function HomeScreen(): JSX.Element {
                 )}
               </div>
 
-              <div className="home-agent-select home-environment-select" ref={environmentMenuRef}>
+              <div className="home-agent-select home-environment-select" ref={clientMenuRef}>
                 <button
                   type="button"
-                  className="home-agent-trigger"
+                  className={`home-agent-trigger home-client-trigger ${!currentClientId || !currentModuleId ? 'home-client-trigger-required' : ''}`}
                   disabled={Boolean(currentChatId)}
                   title={
                     currentChatId
-                      ? 'O ambiente fica fixo após a primeira mensagem'
-                      : 'Selecionar ambiente SAP'
+                      ? 'O cliente e módulo ficam fixos após a primeira mensagem'
+                      : 'Selecionar cliente e módulo'
                   }
-                  onClick={() => setEnvironmentMenuOpen((open) => !open)}
+                  onClick={() => setClientMenuOpen((open) => !open)}
                 >
-                  <ServerCog size={14} strokeWidth={1.75} />
-                  <span>{selectedSapEnvironment.label}</span>
+                  <Building2 size={14} strokeWidth={1.75} />
+                  <span>{selectedClient && selectedModule ? `${selectedClient.name} / ${selectedModule.name}` : 'Cliente / módulo *'}</span>
                   {!currentChatId && <ChevronDown size={12} strokeWidth={1.75} />}
                 </button>
-                {environmentMenuOpen && !currentChatId && (
-                  <div className="home-agent-menu home-environment-menu">
-                    {SAP_ENVIRONMENTS.map((environment) => (
-                      <button
-                        key={environment.id}
-                        type="button"
-                        className={`home-agent-menu-item ${environment.id === sapEnvironmentId ? 'home-agent-menu-item-active' : ''}`}
-                        onClick={() => {
-                          setSapEnvironmentId(environment.id)
-                          setEnvironmentMenuOpen(false)
-                        }}
-                      >
-                        <span>{environment.label}</span>
-                        <small>{environment.family}</small>
-                      </button>
-                    ))}
+                {clientMenuOpen && !currentChatId && (
+                  <div className="home-agent-menu home-environment-menu home-client-menu">
+                    {clients.map((client) => <div key={client.id} className="home-client-group"><strong>{client.name}</strong>{modules.filter((module) => module.clientId === client.id).map((module) => <button key={module.id} type="button" className={`home-agent-menu-item ${module.id === currentModuleId ? 'home-agent-menu-item-active' : ''}`} onClick={() => { setCurrentClientId(client.id); setCurrentModuleId(module.id); setSelectedFolderId(null); setFolderNotice(null); setCurrentProject(null); setClientMenuOpen(false) }}><span>{module.name}</span><small>{client.name}</small></button>)}</div>)}
+                    {clients.length === 0 && <span className="home-client-empty">Cadastre um cliente e módulo em Clientes.</span>}
                   </div>
                 )}
               </div>
@@ -1096,7 +1211,8 @@ export function HomeScreen(): JSX.Element {
                   className="home-composer-send"
                   title="Enviar"
                   disabled={
-                    (!input.trim() && attachments.length === 0) ||
+                    (!input.trim() && attachments.length === 0 && !selectedFolderId) ||
+                    !currentClientId || !currentModuleId ||
                     attachments.some((attachment) => attachment.status === 'reading')
                   }
                   onClick={() => handleSend()}
@@ -1109,7 +1225,7 @@ export function HomeScreen(): JSX.Element {
         </div>
       )}
 
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenClients={() => setView('clients')} />
     </div>
   )
 }

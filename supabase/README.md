@@ -78,6 +78,27 @@ user_id`) nas duas tabelas acima.
 29. `rls/019_advanced_kanban_rls.sql` — restringe as colunas configuráveis ao usuário dono.
 30. `sql/020_sap_horizon_themes.sql` — troca o catálogo antigo pelo SAP Horizon/Quartz e
     migra preferências legadas para o novo tema claro padrão.
+31. `sql/021_clients_collaboration.sql` — clientes/módulos/workbook, convites ADMIN,
+    vínculo obrigatório de novos chats e projetos, arquivos colaborativos e novas policies RLS.
+    Execute **após todos os scripts anteriores** no SQL Editor. A migração cria o cliente
+    `Legado/Geral` para conteúdo existente e o torna visível aos usuários autenticados.
+    Depois, execute `select public.set_abapfy_master('seu-email@dominio.com');` no SQL Editor
+    com o e-mail de uma conta já cadastrada. O MASTER gera convites em Configurações →
+    Administração; o convidado usa o código no mesmo painel. Este script ainda não é
+    aplicado automaticamente pelo aplicativo.
+32. `sql/022_client_folders_and_original_files.sql` — adiciona subpastas colaborativas
+    aos módulos, vínculo de arquivos à pasta e armazenamento privado dos originais
+    no bucket `client-files` (até 20 MB). Execute **após 021**. Arquivos enviados
+    antes desta migração continuam disponíveis apenas como texto extraído; envie-os
+    novamente para obter a pré-visualização original de PDF e DOCX.
+33. `sql/023_client_file_trash.sql` — lixeira colaborativa para arquivos, com autor da
+    exclusão e histórico persistente de exclusão, restauração e esvaziamento. A exclusão
+    definitiva do registro e do original armazenado fica restrita a ADMIN e MASTER.
+    Execute **após 022** antes de usar os controles da lixeira.
+34. `sql/024_chat_folder_and_work_presence.sql` — vincula uma subpasta a cada conversa
+    e registra presença temporária de usuários no chat e no drive. O aplicativo
+    renova a presença enquanto a sessão está aberta e considera inativa uma
+    presença sem atualização por mais de 90 segundos. Execute **após 023**.
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

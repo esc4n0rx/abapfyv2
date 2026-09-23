@@ -1,0 +1,370 @@
+.administration-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 8px;
+  color: var(--color-ink);
+}
+.administration-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding-right: 22px;
+}
+.administration-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  color: var(--color-primary);
+}
+.administration-header h2 {
+  font: 700 23px/1.2 var(--font-display);
+  letter-spacing: -0.45px;
+  margin: 0;
+}
+.administration-header p {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  margin: 6px 0 0;
+}
+.administration-refresh {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-right: 7px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+}
+.administration-refresh:hover {
+  background: var(--color-surface-2);
+  color: var(--color-primary);
+}
+.administration-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-2);
+}
+.administration-identity-icon {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+  color: var(--color-primary);
+}
+.administration-identity > div {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.administration-identity strong,
+.administration-person-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.administration-identity > div span,
+.administration-person-info small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+.administration-role,
+.administration-pill {
+  flex: none;
+  border-radius: var(--radius-pill);
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1));
+  color: var(--color-primary);
+}
+.administration-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+.administration-stats > div {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 3px 6px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+.administration-stats svg {
+  color: var(--color-primary);
+  align-self: center;
+}
+.administration-stats strong {
+  font-size: 17px;
+  line-height: 1;
+}
+.administration-stats span {
+  grid-column: 1/-1;
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--color-ink-muted);
+}
+.administration-panel {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  overflow: hidden;
+}
+.administration-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 16px 12px;
+}
+.administration-panel-heading h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.administration-panel-heading p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-ink-muted);
+}
+.administration-panel-heading > svg {
+  flex: none;
+  color: var(--color-primary);
+}
+.administration-list {
+  padding: 0 8px 7px;
+}
+.administration-person,
+.administration-invitation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--color-hairline);
+}
+.administration-avatar,
+.administration-invite-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 31px;
+  height: 31px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+.administration-person-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.administration-person-info code {
+  user-select: text;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: 10px var(--font-mono);
+  color: var(--color-ink-subtle);
+}
+.administration-pill-master {
+  background: var(--color-surface-3);
+  color: var(--color-ink-muted);
+}
+.administration-icon-danger {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-muted);
+}
+.administration-icon-danger:hover {
+  background: color-mix(in srgb, var(--color-semantic-danger) 10%, transparent);
+  color: var(--color-semantic-danger);
+}
+.administration-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 16px 15px;
+}
+.administration-invite-form label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+.administration-invite-form > div {
+  display: flex;
+  gap: 8px;
+}
+.administration-invite-form input {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+  font-size: 12px;
+}
+.administration-invite-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+.administration-invite-form button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.administration-invite-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.administration-subheading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px 6px;
+  border-top: 1px solid var(--color-hairline);
+}
+.administration-subheading strong {
+  font-size: 11px;
+}
+.administration-subheading span {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  font-size: 10px;
+  color: var(--color-primary);
+}
+.administration-copy,
+.administration-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  padding: 7px 9px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.administration-copy:hover,
+.administration-secondary-button:hover {
+  background: var(--color-surface-3);
+}
+.administration-empty {
+  margin: 8px;
+  color: var(--color-ink-muted);
+  font-size: 11px;
+}
+.administration-history {
+  border-top: 1px solid var(--color-hairline);
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+.administration-history summary {
+  cursor: pointer;
+}
+.administration-history > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+}
+.administration-history small {
+  color: var(--color-ink-tertiary);
+}
+.administration-client-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 14px;
+}
+.administration-client-preview span {
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-ink-muted);
+  font-size: 10px;
+}
+.administration-clients-panel > .administration-secondary-button {
+  margin: 0 16px 16px;
+}
+.administration-notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-semantic-success) 10%, var(--color-surface-1));
+  color: var(--color-semantic-success);
+  font-size: 11px;
+}
+.administration-notice-error {
+  background: color-mix(in srgb, var(--color-semantic-danger) 10%, var(--color-surface-1));
+  color: var(--color-semantic-danger);
+}
+.administration-spin {
+  animation: administration-spin 1s linear infinite;
+}
+@keyframes administration-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 720px) {
+  .administration-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .administration-header {
+    padding-right: 0;
+  }
+  .administration-invite-form > div {
+    flex-direction: column;
+  }
+  .administration-invite-form button {
+    padding: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .administration-spin {
+    animation: none;
+  }
+}

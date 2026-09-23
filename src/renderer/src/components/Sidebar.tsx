@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Bot,
   ChevronRight,
+  Building2,
   ChevronsUpDown,
   FolderInput,
   FolderKanban,
@@ -19,20 +20,22 @@ import {
 import { useAuthStore } from '@renderer/store/authStore'
 import { useChatStore, type ChatSummary, type ProjectSummary } from '@renderer/store/chatStore'
 import { useChatRuntimeStore } from '@renderer/store/chatRuntimeStore'
+import { presenceLabel, type WorkPresence } from '@renderer/lib/workPresence'
 import { UsageModal } from '@renderer/components/UsageModal'
 import './Sidebar.css'
 
-type ShortcutId = 'new-session' | 'projects' | 'tasks' | 'skills' | 'agents'
+type ShortcutId = 'new-session' | 'projects' | 'clients' | 'tasks' | 'skills' | 'agents'
 
 const SHORTCUTS: { id: ShortcutId; icon: typeof Sparkles; label: string }[] = [
   { id: 'new-session', icon: SquarePen, label: 'Nova Sessão' },
   { id: 'projects', icon: FolderKanban, label: 'Projetos' },
+  { id: 'clients', icon: Building2, label: 'Clientes' },
   { id: 'tasks', icon: ListChecks, label: 'Tarefas' },
   { id: 'skills', icon: Sparkles, label: 'Skills' },
   { id: 'agents', icon: Bot, label: 'Agentes' }
 ]
 
-export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects' | 'tasks'
+export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks'
 
 interface SidebarProps {
   activeView: SidebarView
@@ -42,9 +45,11 @@ interface SidebarProps {
   onOpenSkills: () => void
   onOpenAgents: () => void
   onOpenProjects: () => void
+  onOpenClients: () => void
   onOpenTasks: () => void
   onSelectChat: (chatId: string) => void
   onChatRemoved?: (chatId: string) => void
+  workPresence: WorkPresence[]
 }
 
 interface ChatRowProps {
@@ -115,7 +120,7 @@ function ChatRowMenu({ chat, projects, onDelete, onArchive, onMove }: ChatRowPro
     await onArchive()
   }
 
-  const otherProjects = projects.filter((project) => project.id !== chat.projectId)
+  const otherProjects = projects.filter((project) => project.id !== chat.projectId && project.clientId === chat.clientId)
 
   return (
     <div className="chat-row-menu" ref={menuRef}>
@@ -208,9 +213,11 @@ export function Sidebar({
   onOpenSkills,
   onOpenAgents,
   onOpenProjects,
+  onOpenClients,
   onOpenTasks,
   onSelectChat,
-  onChatRemoved
+  onChatRemoved,
+  workPresence
 }: SidebarProps): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
@@ -288,6 +295,7 @@ export function Sidebar({
     if (id === 'skills') onOpenSkills()
     if (id === 'agents') onOpenAgents()
     if (id === 'projects') onOpenProjects()
+    if (id === 'clients') onOpenClients()
     if (id === 'tasks') onOpenTasks()
     if (id === 'new-session') onNewSession()
   }
@@ -341,6 +349,7 @@ export function Sidebar({
                   {chat.title}
                 </button>
                 <div className="sidebar-list-row-end">
+                  {presenceLabel(workPresence.filter((item) => item.chatId === chat.id), user?.id ?? null) && <span className="sidebar-work-dot" title={presenceLabel(workPresence.filter((item) => item.chatId === chat.id), user?.id ?? null) ?? ''} />}
                   {activeChatId !== chat.id && <ChatStatusDot chatId={chat.id} />}
                   <ChatRowMenu
                     chat={chat}
@@ -397,6 +406,7 @@ export function Sidebar({
                         >
                           {chat.title}
                         </button>
+                        {presenceLabel(workPresence.filter((item) => item.chatId === chat.id), user?.id ?? null) && <span className="sidebar-work-dot" title={presenceLabel(workPresence.filter((item) => item.chatId === chat.id), user?.id ?? null) ?? ''} />}
                         <ChatRowMenu
                           chat={chat}
                           active={activeChatId === chat.id}

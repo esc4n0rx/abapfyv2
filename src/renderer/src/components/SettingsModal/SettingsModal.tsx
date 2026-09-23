@@ -1,28 +1,45 @@
 import { useEffect, useState } from 'react'
-import { Bot, Download, Palette, Server, SlidersHorizontal, X } from 'lucide-react'
+import {
+  Bot,
+  Building2,
+  Download,
+  Palette,
+  Server,
+  SlidersHorizontal,
+  Shield,
+  X
+} from 'lucide-react'
 import { GeneralSection } from './GeneralSection'
 import { AiSection } from './AiSection'
 import { ParametrosSection } from './ParametrosSection'
 import { UpdatesSection } from './UpdatesSection'
 import { McpSection } from './McpSection'
+import { AdministrationSection } from './AdministrationSection'
 import './SettingsModal.css'
 
-type SectionId = 'general' | 'ai' | 'mcp' | 'parametros' | 'updates'
+type SectionId = 'general' | 'ai' | 'mcp' | 'parametros' | 'clients' | 'administration' | 'updates'
 
 const SECTIONS: { id: SectionId; label: string; icon: typeof Palette }[] = [
   { id: 'general', label: 'Geral', icon: Palette },
   { id: 'ai', label: 'Inteligência Artificial', icon: Bot },
   { id: 'mcp', label: 'MCP', icon: Server },
   { id: 'parametros', label: 'Parâmetros', icon: SlidersHorizontal },
+  { id: 'clients', label: 'Clientes', icon: Building2 },
+  { id: 'administration', label: 'Administração', icon: Shield },
   { id: 'updates', label: 'Atualizações', icon: Download }
 ]
 
 interface SettingsModalProps {
   open: boolean
   onClose: () => void
+  onOpenClients: () => void
 }
 
-export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Element | null {
+export function SettingsModal({
+  open,
+  onClose,
+  onOpenClients
+}: SettingsModalProps): JSX.Element | null {
   const [activeSection, setActiveSection] = useState<SectionId>('general')
 
   useEffect(() => {
@@ -40,7 +57,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
   return (
     <div className="settings-overlay" onMouseDown={onClose}>
       <div
-        className={`settings-modal ${activeSection === 'parametros' || activeSection === 'mcp' ? 'settings-modal-wide' : ''}`}
+        className={`settings-modal ${activeSection === 'parametros' || activeSection === 'mcp' || activeSection === 'administration' ? 'settings-modal-wide' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <nav className="settings-nav">
@@ -67,6 +84,32 @@ export function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Elemen
           {activeSection === 'ai' && <AiSection />}
           {activeSection === 'mcp' && <McpSection />}
           {activeSection === 'parametros' && <ParametrosSection />}
+          {activeSection === 'clients' && (
+            <div className="settings-section">
+              <header className="settings-section-header">
+                <h2>Clientes</h2>
+                <p>Configure clientes, módulos e workbooks na área compartilhada.</p>
+              </header>
+              <button
+                type="button"
+                className="settings-action"
+                onClick={() => {
+                  onClose()
+                  onOpenClients()
+                }}
+              >
+                Abrir gerenciamento de clientes
+              </button>
+            </div>
+          )}
+          {activeSection === 'administration' && (
+            <AdministrationSection
+              onOpenClients={() => {
+                onClose()
+                onOpenClients()
+              }}
+            />
+          )}
           {activeSection === 'updates' && <UpdatesSection />}
         </div>
       </div>

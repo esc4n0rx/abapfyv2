@@ -176,9 +176,9 @@
   align-items: flex-start;
   gap: 6px;
   padding: 8px 12px;
-  border-top: 1px solid rgba(229, 72, 77, 0.22);
-  background: rgba(229, 72, 77, 0.08);
-  color: #f2a1a4;
+  border-top: 1px solid color-mix(in srgb, var(--color-semantic-danger) 22%, transparent);
+  background: color-mix(in srgb, var(--color-semantic-danger) 8%, var(--color-surface-1));
+  color: var(--color-semantic-danger);
   font: 10px/1.4 var(--font-text);
 }
 
@@ -275,7 +275,7 @@
 }
 
 .estimate-card-details-danger summary {
-  color: #f08084;
+  color: var(--color-semantic-danger);
 }
 .estimate-card-details .estimate-list {
   margin-top: var(--space-sm);

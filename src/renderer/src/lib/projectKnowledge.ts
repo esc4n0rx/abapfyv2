@@ -25,6 +25,7 @@ export interface ProjectDocument {
   sizeBytes: number
   indexingMode: 'semantic' | 'lexical'
   updatedAt: string
+  userId: string
 }
 
 export interface KnowledgeMatch {
@@ -84,7 +85,7 @@ async function createOpenAiEmbeddings(apiKey: string, inputs: string[]): Promise
 export async function listProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
   const { data, error } = await supabase
     .from('project_documents')
-    .select('id, project_id, name, category, version, size_bytes, indexing_mode, updated_at')
+    .select('id, project_id, name, category, version, size_bytes, indexing_mode, updated_at, user_id')
     .eq('project_id', projectId)
     .order('updated_at', { ascending: false })
   if (error) throw error
@@ -96,7 +97,8 @@ export async function listProjectDocuments(projectId: string): Promise<ProjectDo
     version: row.version,
     sizeBytes: Number(row.size_bytes),
     indexingMode: row.indexing_mode,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    userId: row.user_id
   }))
 }
 
@@ -160,7 +162,8 @@ export async function uploadProjectDocument(input: {
     version: document.version,
     sizeBytes: Number(document.size_bytes),
     indexingMode: document.indexing_mode,
-    updatedAt: document.updated_at
+    updatedAt: document.updated_at,
+    userId: document.user_id
   }
 }
 

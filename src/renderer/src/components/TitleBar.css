@@ -61,5 +61,6 @@
 }
 
 .titlebar-btn-close:active {
-  background: #c53a3e;
+  background: var(--color-semantic-danger);
+  filter: brightness(0.9);
 }

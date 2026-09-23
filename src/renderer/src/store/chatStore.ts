@@ -9,6 +9,9 @@ export interface ChatSummary {
   projectId: string | null
   agentName: string | null
   updatedAt: string
+  clientId: string
+  moduleId: string
+  userId: string
 }
 
 export interface ProjectSummary {
@@ -18,6 +21,9 @@ export interface ProjectSummary {
   context: string | null
   defaultAgentSource: AgentSource | null
   defaultAgentId: string | null
+  clientId: string
+  userId: string
+  createdAt: string
 }
 
 export interface ChatMeta {
@@ -33,6 +39,9 @@ export interface ChatMeta {
   skillIds: string[]
   sapEnvironmentId: string | null
   sapEnvironmentLabel: string | null
+  clientId: string
+  moduleId: string
+  folderId: string | null
 }
 
 export interface PersistedToolActivity {
@@ -53,6 +62,9 @@ export interface PersistedMessage {
 }
 
 interface CreateChatInput {
+  clientId: string
+  moduleId: string
+  folderId: string | null
   projectId: string | null
   title: string
   agentSource: AgentSource | null
@@ -67,6 +79,7 @@ interface CreateChatInput {
 }
 
 interface CreateProjectInput {
+  clientId: string
   name: string
   description: string
   context: string
@@ -103,13 +116,19 @@ function toChatSummary(row: {
   project_id: string | null
   agent_name: string | null
   updated_at: string
+  client_id: string
+  module_id: string
+  user_id: string
 }): ChatSummary {
   return {
     id: row.id,
     title: row.title,
     projectId: row.project_id,
     agentName: row.agent_name,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    clientId: row.client_id,
+    moduleId: row.module_id,
+    userId: row.user_id
   }
 }
 
@@ -126,8 +145,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const [{ data: chatRows }, { data: projectRows }] = await Promise.all([
       supabase
         .from('chats')
-        .select('id, title, project_id, agent_name, updated_at')
-        .eq('user_id', userId)
+        .select('id, title, project_id, agent_name, updated_at, client_id, module_id, user_id')
         .eq('archived', false)
         .is('project_id', null)
         .order('updated_at', { ascending: false })
@@ -135,7 +153,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       supabase
         .from('projects')
         .select('*')
-        .eq('user_id', userId)
         .order('updated_at', { ascending: false })
     ])
 
@@ -148,7 +165,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         description: row.description,
         context: row.context,
         defaultAgentSource: row.default_agent_source,
-        defaultAgentId: row.default_agent_id
+        defaultAgentId: row.default_agent_id,
+        clientId: row.client_id,
+        userId: row.user_id,
+        createdAt: row.created_at
       }))
     })
   },
@@ -159,8 +179,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const { data } = await supabase
       .from('chats')
-      .select('id, title, project_id, agent_name, updated_at')
-      .eq('user_id', userId)
+      .select('id, title, project_id, agent_name, updated_at, client_id, module_id, user_id')
       .eq('archived', false)
       .eq('project_id', projectId)
       .order('updated_at', { ascending: false })
@@ -178,6 +197,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .from('projects')
       .insert({
         user_id: userId,
+        client_id: input.clientId,
         name: input.name.trim(),
         description: input.description.trim() || null,
         context: input.context.trim() || null,
@@ -195,7 +215,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       description: data.description,
       context: data.context,
       defaultAgentSource: data.default_agent_source,
-      defaultAgentId: data.default_agent_id
+      defaultAgentId: data.default_agent_id,
+      clientId: data.client_id,
+      userId: data.user_id,
+      createdAt: data.created_at
     }
 
     set((state) => ({ projects: [project, ...state.projects] }))
@@ -210,6 +233,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .from('chats')
       .insert({
         user_id: userId,
+        client_id: input.clientId,
+        module_id: input.moduleId,
+        folder_id: input.folderId,
         project_id: input.projectId,
         title: input.title,
         agent_source: input.agentSource,
@@ -222,7 +248,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         sap_environment_id: input.sapEnvironmentId,
         sap_environment_label: input.sapEnvironmentLabel
       })
-      .select('id, title, project_id, agent_name, updated_at')
+      .select('id, title, project_id, agent_name, updated_at, client_id, module_id, user_id')
       .single()
 
     if (error || !data) return null
@@ -261,7 +287,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       model: data.model,
       skillIds: data.skill_ids ?? [],
       sapEnvironmentId: data.sap_environment_id ?? null,
-      sapEnvironmentLabel: data.sap_environment_label ?? null
+      sapEnvironmentLabel: data.sap_environment_label ?? null,
+      clientId: data.client_id,
+      moduleId: data.module_id,
+      folderId: data.folder_id ?? null
     }
   },
 
@@ -335,7 +364,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const userId = currentUserId()
     if (!userId) return false
 
-    const { error } = await supabase.from('chats').delete().eq('id', chatId).eq('user_id', userId)
+    const { error } = await supabase.from('chats').delete().eq('id', chatId)
     if (error) return false
 
     set((state) => ({
@@ -358,7 +387,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .from('chats')
       .update({ archived: true })
       .eq('id', chatId)
-      .eq('user_id', userId)
     if (error) return false
 
     set((state) => ({
@@ -381,8 +409,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .from('chats')
       .update({ project_id: projectId })
       .eq('id', chatId)
-      .eq('user_id', userId)
-      .select('id, title, project_id, agent_name, updated_at')
+      .select('id, title, project_id, agent_name, updated_at, client_id, module_id, user_id')
       .single()
     if (error || !data) return false
 

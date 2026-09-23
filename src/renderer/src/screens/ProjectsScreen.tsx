@@ -4,6 +4,7 @@ import { NewProjectModal } from '@renderer/components/NewProjectModal'
 import { useChatStore, type ProjectSummary } from '@renderer/store/chatStore'
 import { useAgentsStore } from '@renderer/store/agentsStore'
 import { ProjectKnowledgeModal } from '@renderer/components/ProjectKnowledgeModal'
+import { useClientsStore } from '@renderer/store/clientsStore'
 import './SkillsScreen.css'
 import './ProjectsScreen.css'
 
@@ -22,6 +23,7 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps): JSX.Elem
     createProject: state.createProject
   }))
   const agents = useAgentsStore((state) => state.agents)
+  const clients = useClientsStore((state) => state.clients)
 
   useEffect(() => {
     if (!loaded) load()
@@ -77,6 +79,7 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps): JSX.Elem
               </div>
 
               {project.description && <p className="skill-card-summary">{project.description}</p>}
+              <p className="skill-card-summary">Cliente: {clients.find((client) => client.id === project.clientId)?.name ?? 'Desconhecido'} · Criado em {new Intl.DateTimeFormat('pt-BR').format(new Date(project.createdAt))}</p>
 
               <div className="project-card-actions">
                 <button

@@ -53,17 +53,17 @@
 }
 
 .structured-badge-success {
-  background: rgba(39, 166, 68, 0.14);
+  background: color-mix(in srgb, var(--color-semantic-success) 14%, var(--color-surface-1));
   color: var(--color-semantic-success);
 }
 
 .structured-badge-warning {
-  background: rgba(217, 140, 43, 0.14);
-  color: #d98c2b;
+  background: color-mix(in srgb, var(--color-semantic-warning) 14%, var(--color-surface-1));
+  color: var(--color-semantic-warning);
 }
 
 .structured-badge-danger {
-  background: rgba(229, 72, 77, 0.14);
+  background: color-mix(in srgb, var(--color-semantic-danger) 14%, var(--color-surface-1));
   color: var(--color-semantic-danger);
 }
 

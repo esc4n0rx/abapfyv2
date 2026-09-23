@@ -10,6 +10,7 @@ import {
   type ProjectDocument
 } from '@renderer/lib/projectKnowledge'
 import type { ProjectSummary } from '@renderer/store/chatStore'
+import { supabase } from '@renderer/lib/supabaseClient'
 import './ProjectKnowledgeModal.css'
 
 interface Props {
@@ -27,6 +28,7 @@ export function ProjectKnowledgeModal({ project, onClose }: Props): JSX.Element 
   const user = useAuthStore((state) => state.user)
   const fileRef = useRef<HTMLInputElement>(null)
   const [documents, setDocuments] = useState<ProjectDocument[]>([])
+  const [authorNames, setAuthorNames] = useState<Record<string, string>>({})
   const [category, setCategory] = useState<KnowledgeCategory>('documentacao')
   const [version, setVersion] = useState('1.0')
   const [query, setQuery] = useState('')
@@ -43,6 +45,14 @@ export function ProjectKnowledgeModal({ project, onClose }: Props): JSX.Element 
       .catch(() => setError('Não foi possível carregar a base de conhecimento.'))
       .finally(() => setLoading(false))
   }, [project])
+
+  useEffect(() => {
+    const ids = [...new Set(documents.map((document) => document.userId))]
+    if (ids.length === 0) return
+    void supabase.from('profiles').select('id, nome').in('id', ids).then(({ data }) => {
+      setAuthorNames(Object.fromEntries((data ?? []).map((row) => [row.id, row.nome])))
+    })
+  }, [documents])
 
   if (!project) return null
 
@@ -186,6 +196,7 @@ export function ProjectKnowledgeModal({ project, onClose }: Props): JSX.Element 
                   <span>{KNOWLEDGE_CATEGORY_LABELS[document.category]}</span>
                   <span>v{document.version}</span>
                   <span>{formatBytes(document.sizeBytes)}</span>
+                  <span>Por {authorNames[document.userId] ?? 'Usuário'}</span>
                   <span>
                     Atualizado{' '}
                     {new Intl.DateTimeFormat('pt-BR').format(new Date(document.updatedAt))}
