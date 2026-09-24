@@ -18,7 +18,7 @@ import {
 let mainWindow: BrowserWindow | null = null
 const approvedStdioConfigs = new Set<string>()
 const mainDirectory = dirname(fileURLToPath(import.meta.url))
-const icon = join(mainDirectory, '../../resources/icon.png')
+const icon = join(mainDirectory, '../../resources/abapfy-horizon-mark.png')
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({

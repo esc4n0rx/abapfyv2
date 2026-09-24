@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { GeoSystemBrand } from './GeoSystemBrand'
+import { AbapfyMark } from './AbapfyMark'
 import './TitleBar.css'
 
 function MinimizeIcon(): JSX.Element {
@@ -64,7 +65,7 @@ export function TitleBar({ title }: TitleBarProps): JSX.Element {
         <span className="titlebar-brand">
           {title ?? (
             <>
-              <GeoSystemBrand /> <span className="titlebar-brand-separator">-</span> Abapfy
+              <AbapfyMark className="titlebar-brand-mark" /> <GeoSystemBrand /> <span className="titlebar-brand-separator">-</span> Abapfy
             </>
           )}
         </span>

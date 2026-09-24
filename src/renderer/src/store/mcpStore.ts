@@ -121,7 +121,7 @@ export const useMcpStore = create<McpState>((set, get) => ({
 
   createPreset: async (preset) => {
     const userId = currentUserId()
-    if (!userId) return
+    if (!userId || !useAuthStore.getState().role) { set({ error: 'Apenas master e administradores podem configurar integrações.' }); return }
     const base =
       preset === 'sap_docs'
         ? {
@@ -166,7 +166,7 @@ export const useMcpStore = create<McpState>((set, get) => ({
 
   updateServer: async (id, changes) => {
     const userId = currentUserId()
-    if (!userId) return
+    if (!userId || !useAuthStore.getState().role) { set({ error: 'Apenas master e administradores podem configurar integrações.' }); return }
     const payload: Record<string, unknown> = {}
     if (changes.name !== undefined) payload.name = changes.name
     if (changes.description !== undefined) payload.description = changes.description || null
@@ -191,7 +191,7 @@ export const useMcpStore = create<McpState>((set, get) => ({
 
   removeServer: async (id) => {
     const userId = currentUserId()
-    if (!userId) return
+    if (!userId || !useAuthStore.getState().role) { set({ error: 'Apenas master e administradores podem configurar integrações.' }); return }
     const { error } = await supabase.from('mcp_servers').delete().eq('user_id', userId).eq('id', id)
     if (error) {
       set({ error: error.message })
@@ -206,7 +206,7 @@ export const useMcpStore = create<McpState>((set, get) => ({
 
   toggleBinding: async (serverId, agentSource, agentId) => {
     const userId = currentUserId()
-    if (!userId) return
+    if (!userId || !useAuthStore.getState().role) { set({ error: 'Apenas master e administradores podem configurar integrações.' }); return }
     const existing = get().bindings.find(
       (binding) =>
         binding.serverId === serverId &&

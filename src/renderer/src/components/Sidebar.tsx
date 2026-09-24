@@ -23,6 +23,7 @@ import { useChatStore, type ChatSummary, type ProjectSummary } from '@renderer/s
 import { useChatRuntimeStore } from '@renderer/store/chatRuntimeStore'
 import { presenceLabel, type WorkPresence } from '@renderer/lib/workPresence'
 import { UsageModal } from '@renderer/components/UsageModal'
+import { AbapfyMark } from '@renderer/components/AbapfyMark'
 import './Sidebar.css'
 
 type ShortcutId = 'new-session' | 'projects' | 'clients' | 'tasks' | 'skills' | 'agents'
@@ -320,6 +321,7 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
+        <AbapfyMark className="sidebar-brand-mark" />
         <span className="sidebar-brand-name">Abapfy</span>
       </div>
 

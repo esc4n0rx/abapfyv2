@@ -19,11 +19,20 @@
 }
 
 .titlebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 13px;
   letter-spacing: -0.2px;
   color: var(--color-ink-subtle);
+}
+
+.titlebar-brand-mark {
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
 }
 
 .titlebar-brand-separator {

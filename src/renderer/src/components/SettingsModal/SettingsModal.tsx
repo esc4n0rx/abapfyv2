@@ -57,7 +57,7 @@ export function SettingsModal({
   return (
     <div className="settings-overlay" onMouseDown={onClose}>
       <div
-        className={`settings-modal ${activeSection === 'parametros' || activeSection === 'mcp' || activeSection === 'administration' ? 'settings-modal-wide' : ''}`}
+        className={`settings-modal ${activeSection === 'ai' || activeSection === 'parametros' || activeSection === 'mcp' || activeSection === 'administration' ? 'settings-modal-wide' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <nav className="settings-nav">

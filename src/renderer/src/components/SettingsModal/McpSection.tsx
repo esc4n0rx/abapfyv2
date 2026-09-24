@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, BookOpen, Save, Server, Trash2 } from 'lucide-react'
 import { useAgentsStore } from '@renderer/store/agentsStore'
 import { useMcpStore, type McpServerItem } from '@renderer/store/mcpStore'
+import { useAuthStore } from '@renderer/store/authStore'
 import './SettingsSections.css'
 
 interface Draft {
@@ -19,6 +20,7 @@ function draftOf(server: McpServerItem): Draft {
 }
 
 export function McpSection(): JSX.Element {
+  const role = useAuthStore((state) => state.role)
   const agents = useAgentsStore((state) => state.agents)
   const { servers, bindings, loading, error, load, createPreset, updateServer, removeServer, toggleBinding } =
     useMcpStore()
@@ -85,6 +87,22 @@ export function McpSection(): JSX.Element {
       }))
     }
   }
+
+  if (!role) return (
+    <div className="settings-section settings-section-mcp">
+      <header className="settings-section-header"><h2>Model Context Protocol</h2>
+        <p>Integrações disponibilizadas pela administração para sua conta.</p></header>
+      {error && <div className="mcp-error">{error}</div>}
+      {servers.length === 0 && <span className="settings-muted">Nenhuma integração configurada.</span>}
+      <div className="mcp-server-list">{servers.map((server) => (
+        <article key={server.id} className="mcp-server-card">
+          <strong>{server.name}</strong>
+          <span className="settings-muted">{server.enabled ? 'Ativa' : 'Inativa'}</span>
+          {server.description && <p className="mcp-server-description">{server.description}</p>}
+        </article>
+      ))}</div>
+    </div>
+  )
 
   return (
     <div className="settings-section settings-section-mcp">

@@ -11,7 +11,7 @@ asarUnpack:
   - resources/**
 win:
   executableName: abapfy
-  icon: build/icon.png
+  icon: resources/abapfy-horizon-mark.png
   target:
     - target: nsis
       arch:
@@ -25,13 +25,14 @@ nsis:
   allowToChangeInstallationDirectory: true
   include: build/installer.nsh
 mac:
-  icon: build/icon.png
+  icon: resources/abapfy-horizon-mark.png
   category: public.app-category.developer-tools
   target:
     - dmg
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: build/horizon-icons
   target:
     - AppImage
   category: Development

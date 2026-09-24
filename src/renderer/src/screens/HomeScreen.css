@@ -224,13 +224,7 @@
   height: 56px;
   margin-bottom: var(--space-xs);
   filter: none;
-  opacity: 0.9;
-}
-
-:root[data-theme='sap-horizon-dark'] .home-welcome-logo,
-:root[data-theme='sap-quartz-dark'] .home-welcome-logo,
-:root[data-theme='sap-horizon-hcb'] .home-welcome-logo {
-  filter: invert(1);
+  opacity: 1;
 }
 
 .home-welcome-title {

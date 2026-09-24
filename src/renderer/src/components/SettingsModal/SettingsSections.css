@@ -195,6 +195,19 @@
 
 /* AI provider cards */
 
+.ai-integrations-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.ai-integrations-panel h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
 .ai-provider-list {
   display: flex;
   flex-direction: column;

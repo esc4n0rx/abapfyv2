@@ -4,6 +4,27 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.11] - 2026-09-24
+
+### Adicionado
+
+- Master e administradores podem selecionar usuários na aba Inteligência Artificial para
+  provisionar chaves de API, ativar integrações MCP e vincular agentes. Usuários comuns
+  consultam as integrações disponíveis e escolhem o modelo padrão.
+- Nova marca Abapfy alinhada ao Horizon nas telas do aplicativo e nos ícones dos pacotes
+  Windows, macOS e Linux.
+
+### Segurança
+
+- A migração `supabase/sql/025_admin_ai_integrations.sql` restringe a gravação de chaves e
+  integrações a MASTER/ADMIN no banco. Administradores consultam apenas o estado das chaves
+  de outras contas, sem receber os segredos.
+
+### Configuração necessária
+
+- Aplicar a migração 025 no Supabase após as migrações 021–024 para ativar a nova hierarquia
+  de acesso. A publicação do aplicativo não aplica migrações automaticamente.
+
 ## [0.3.10] - 2026-09-24
 
 ### Corrigido

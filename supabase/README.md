@@ -101,6 +101,10 @@ user_id`) nas duas tabelas acima.
     e registra presença temporária de usuários no chat e no drive. O aplicativo
     renova a presença enquanto a sessão está aberta e considera inativa uma
     presença sem atualização por mais de 90 segundos. Execute **após 023**.
+35. `sql/025_admin_ai_integrations.sql` — restringe a criação, alteração e remoção de
+    chaves de IA e integrações MCP a MASTER/ADMIN. Adiciona funções para selecionar
+    usuários, consultar apenas o estado das chaves e provisioná-las sem exibir o
+    segredo de outras contas. Execute **após 024**.
 
 > **Nota de segurança:** `ai_api_keys.api_key` é armazenada em texto plano nesta primeira
 > etapa, protegida apenas por RLS (linha visível somente ao próprio usuário autenticado).

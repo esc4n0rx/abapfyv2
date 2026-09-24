@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@renderer/store/authStore'
+import { AbapfyMark } from '@renderer/components/AbapfyMark'
 import './AuthScreen.css'
 
 type Mode = 'login' | 'register'
@@ -62,7 +63,7 @@ export function AuthScreen(): JSX.Element {
     <div className="auth-screen">
       <div className="auth-card">
         <div className="auth-header">
-          <span className="auth-eyebrow">Abapfy</span>
+          <span className="auth-eyebrow"><AbapfyMark className="auth-brand-mark" />Abapfy</span>
           <h1 className="auth-title">
             {mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua conta'}
           </h1>

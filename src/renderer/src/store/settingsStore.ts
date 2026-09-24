@@ -107,22 +107,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   saveApiKey: async (provider, apiKey) => {
     const userId = currentUserId()
     if (!userId || !apiKey.trim()) return
+    if (!useAuthStore.getState().role) throw new Error('Apenas master e administradores podem configurar chaves de API.')
 
-    const { data, error } = await supabase
-      .from('ai_api_keys')
-      .upsert(
-        { user_id: userId, provider, api_key: apiKey.trim() },
-        { onConflict: 'user_id,provider' }
-      )
-      .select('updated_at')
-      .single()
-
-    if (error) return
+    const { error } = await supabase.rpc('set_ai_api_key', {
+      p_user_id: userId, p_provider: provider, p_api_key: apiKey.trim()
+    })
+    if (error) throw error
 
     set((state) => ({
       apiKeys: {
         ...state.apiKeys,
-        [provider]: { configured: true, updatedAt: data?.updated_at ?? new Date().toISOString() }
+        [provider]: { configured: true, updatedAt: new Date().toISOString() }
       }
     }))
   },
@@ -130,8 +125,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   removeApiKey: async (provider) => {
     const userId = currentUserId()
     if (!userId) return
+    if (!useAuthStore.getState().role) throw new Error('Apenas master e administradores podem remover chaves de API.')
 
-    await supabase.from('ai_api_keys').delete().eq('user_id', userId).eq('provider', provider)
+    const { error } = await supabase.rpc('remove_ai_api_key', { p_user_id: userId, p_provider: provider })
+    if (error) throw error
 
     set((state) => ({
       apiKeys: { ...state.apiKeys, [provider]: { configured: false, updatedAt: null } }
@@ -140,9 +137,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const { defaultProvider } = get()
     if (defaultProvider === provider) {
       set({ defaultProvider: null, defaultModel: null })
-      await supabase
-        .from('user_settings')
-        .upsert({ user_id: userId, default_ai_provider: null, default_ai_model: null })
     }
   },
 

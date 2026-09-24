@@ -29,12 +29,21 @@
 }
 
 .auth-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-text);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--color-primary);
+}
+
+.auth-brand-mark {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .auth-title {

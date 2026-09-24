@@ -11,8 +11,15 @@
 .sidebar-brand {
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
   height: 48px;
   padding: 0 var(--space-md);
+}
+
+.sidebar-brand-mark {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .sidebar-brand-name {

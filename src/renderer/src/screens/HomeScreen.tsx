@@ -17,7 +17,7 @@ import {
   X,
   Zap
 } from 'lucide-react'
-import abapfyLogo from '@renderer/assets/logo.png'
+import abapfyLogo from '@renderer/assets/abapfy-horizon-mark.png'
 import { Sidebar } from '@renderer/components/Sidebar'
 import { SettingsModal } from '@renderer/components/SettingsModal/SettingsModal'
 import {
