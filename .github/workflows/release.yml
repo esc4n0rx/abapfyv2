@@ -13,6 +13,9 @@ jobs:
   release:
     strategy:
       fail-fast: false
+      # electron-builder creates/uploads to the same GitHub release from every job.
+      # Serializing them avoids duplicate releases when the tag is new.
+      max-parallel: 1
       matrix:
         include:
           - os: windows-latest

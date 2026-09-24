@@ -4,6 +4,14 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.9] - 2026-09-24
+
+### Corrigido
+
+- Publica os quatro pacotes da versão em sequência para evitar releases duplicadas e artefatos
+  divididos entre elas. Inclui as melhorias de autenticação, recuperação de senha e marca da
+  versão 0.3.8.
+
 ## [0.3.8] - 2026-09-24
 
 ### Adicionado
