@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="152" viewBox="0 0 820 152" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo de trabalho do Abapfy</title>
+  <desc id="desc">Cliente e módulo alimentam o contexto, que orienta agentes e ferramentas para produzir resultados.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1726"/><stop offset="1" stop-color="#173c69"/></linearGradient>
+    <linearGradient id="line"><stop stop-color="#51b8ff"/><stop offset="1" stop-color="#9ce8e2"/></linearGradient>
+  </defs>
+  <rect x="1" y="1" width="818" height="150" rx="20" fill="url(#background)" stroke="#315d88"/>
+  <text x="32" y="31" fill="#9fc6e7" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">DO CONTEXTO À ENTREGA</text>
+  <path d="M184 86H224 M382 86H422 M580 86H620" fill="none" stroke="url(#line)" stroke-width="2" stroke-dasharray="5 5" opacity=".7"/>
+  <g fill="#112c4d" stroke="#3a80bd"><rect x="31" y="56" width="153" height="61" rx="13"/><rect x="224" y="56" width="158" height="61" rx="13"/><rect x="422" y="56" width="158" height="61" rx="13"/><rect x="620" y="56" width="169" height="61" rx="13"/></g>
+  <g fill="#e8f5ff" font-family="Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle"><text x="107" y="82"><tspan x="107">Cliente</tspan><tspan x="107" dy="20">e módulo</tspan></text><text x="303" y="93">Contexto</text><text x="501" y="82"><tspan x="501">Agentes</tspan><tspan x="501" dy="20">e ferramentas</tspan></text><text x="704" y="93">Resultado</text></g>
+  <g fill="#8fe3ff">
+    <circle r="4" cy="86"><animate attributeName="cx" values="184;224" dur="2.7s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2.7s" repeatCount="indefinite"/></circle>
+    <circle r="4" cy="86"><animate attributeName="cx" values="382;422" dur="2.7s" begin=".8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2.7s" begin=".8s" repeatCount="indefinite"/></circle>
+    <circle r="4" cy="86"><animate attributeName="cx" values="580;620" dur="2.7s" begin="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2.7s" begin="1.6s" repeatCount="indefinite"/></circle>
+  </g>
+</svg>
