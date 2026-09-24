@@ -4,6 +4,26 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.8] - 2026-09-24
+
+### Adicionado
+
+- Recuperação de senha por código enviado ao e-mail, com verificação e definição da nova senha
+  dentro do aplicativo.
+- Template de recuperação GeoSystem - Abapfy com nome e empresa quando disponíveis nos
+  metadados da conta.
+
+### Corrigido
+
+- Login com erro permanece na tela de entrada e exibe a mensagem; a tela principal exige
+  sessão autenticada e o botão Sair retorna ao login.
+- Header e tela de abertura exibem a marca GeoSystem em duas cores.
+
+### Configuração necessária
+
+- O envio do código depende da ativação do SMTP personalizado e da instalação do template
+  `supabase/email-templates/recovery.html` no projeto Supabase.
+
 ## [0.3.6] - 2026-08-31
 
 ### Corrigido

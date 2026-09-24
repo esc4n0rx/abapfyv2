@@ -129,6 +129,26 @@
   color: var(--color-semantic-danger);
 }
 
+.auth-text-action {
+  align-self: flex-start;
+  color: var(--color-primary);
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.auth-text-action:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.auth-text-action:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
 .auth-submit {
   background: var(--color-primary);
   color: var(--color-on-primary);

@@ -26,6 +26,11 @@
   color: var(--color-ink-subtle);
 }
 
+.titlebar-brand-separator {
+  color: var(--color-ink-tertiary);
+  margin: 0 2px;
+}
+
 .titlebar-controls {
   -webkit-app-region: no-drag;
   display: flex;

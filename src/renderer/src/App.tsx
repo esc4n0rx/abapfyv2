@@ -4,6 +4,7 @@ import { TitleBar } from '@renderer/components/TitleBar'
 import { McpConfirmationBanner } from '@renderer/components/McpConfirmationBanner'
 import { SplashScreen } from '@renderer/screens/SplashScreen'
 import { AuthScreen } from '@renderer/screens/AuthScreen'
+import { PasswordRecoveryScreen } from '@renderer/screens/PasswordRecoveryScreen'
 import { HomeScreen } from '@renderer/screens/HomeScreen'
 import { useAuthStore } from '@renderer/store/authStore'
 import { useSettingsStore } from '@renderer/store/settingsStore'
@@ -92,8 +93,21 @@ function App(): JSX.Element {
       <div className="app-content">
         <Routes>
           <Route path="/" element={<SplashScreen />} />
-          <Route path="/auth" element={<AuthScreen />} />
-          <Route path="/dashboard" element={<HomeScreen />} />
+          <Route
+            path="/auth"
+            element={status === 'authenticated' ? <Navigate to="/dashboard" replace /> : <AuthScreen />}
+          />
+          <Route path="/reset-password" element={<PasswordRecoveryScreen />} />
+          <Route
+            path="/dashboard"
+            element={
+              status === 'authenticated' ? (
+                <HomeScreen />
+              ) : (
+                <Navigate to={status === 'unauthenticated' ? '/auth' : '/'} replace />
+              )
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

@@ -2,6 +2,8 @@
 
 Scripts SQL do projeto, aplicados via SQL Editor do Supabase ou pela CLI (`supabase db push`).
 
+O template do e-mail de recuperação de senha e as etapas de configuração do SMTP estão em [`email-templates/README.md`](./email-templates/README.md).
+
 ## Ordem de execução
 
 1. `sql/001_profiles.sql` — tabela `profiles` (nome, cargo, empresa) + trigger que cria o

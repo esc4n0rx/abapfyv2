@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@renderer/store/authStore'
+import { GeoSystemBrand } from '@renderer/components/GeoSystemBrand'
 import './SplashScreen.css'
 
 // Tempo mínimo que a marca fica na tela — sem isso, uma sessão já em cache
@@ -61,6 +62,9 @@ export function SplashScreen(): JSX.Element {
   return (
     <div className="splash">
       <span className="splash-mark">Abapfy</span>
+      <span className="splash-company">
+        <GeoSystemBrand />
+      </span>
       <span className="splash-tagline">ferramentas para o ecossistema SAP/ABAP</span>
       <div className={`splash-status ${settled ? 'splash-status-settled' : ''}`}>
         <span className="splash-progress-track">

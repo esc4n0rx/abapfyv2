@@ -50,8 +50,8 @@ export function AuthScreen(): JSX.Element {
     clearError()
 
     if (mode === 'login') {
-      await signIn({ email: form.email, senha: form.senha })
-      navigate('/dashboard')
+      const signedIn = await signIn({ email: form.email, senha: form.senha })
+      if (signedIn) navigate('/dashboard', { replace: true })
       return
     }
 
@@ -160,6 +160,16 @@ export function AuthScreen(): JSX.Element {
           )}
 
           {error && <p className="auth-error">{error}</p>}
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              className="auth-text-action"
+              onClick={() => navigate('/reset-password', { state: { email: form.email } })}
+            >
+              Esqueci minha senha
+            </button>
+          )}
 
           <button type="submit" className="auth-submit" disabled={isLoading}>
             {isLoading ? 'Aguarde…' : mode === 'login' ? 'Entrar' : 'Criar conta'}

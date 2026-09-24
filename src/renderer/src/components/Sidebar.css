@@ -23,6 +23,12 @@
   color: var(--color-ink);
 }
 
+.sidebar-user-menu-error {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-semantic-danger);
+  font-size: 12px;
+}
+
 .sidebar-shortcuts {
   display: flex;
   flex-direction: column;

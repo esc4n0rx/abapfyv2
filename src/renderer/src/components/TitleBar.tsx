@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { GeoSystemBrand } from './GeoSystemBrand'
 import './TitleBar.css'
 
 function MinimizeIcon(): JSX.Element {
@@ -48,7 +49,7 @@ interface TitleBarProps {
   title?: string
 }
 
-export function TitleBar({ title = 'Abapfy' }: TitleBarProps): JSX.Element {
+export function TitleBar({ title }: TitleBarProps): JSX.Element {
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
@@ -60,7 +61,13 @@ export function TitleBar({ title = 'Abapfy' }: TitleBarProps): JSX.Element {
   return (
     <div className="titlebar">
       <div className="titlebar-drag">
-        <span className="titlebar-brand">{title}</span>
+        <span className="titlebar-brand">
+          {title ?? (
+            <>
+              <GeoSystemBrand /> <span className="titlebar-brand-separator">-</span> Abapfy
+            </>
+          )}
+        </span>
       </div>
       <div className="titlebar-controls">
         <button

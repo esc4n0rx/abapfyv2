@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Archive,
   ArrowLeft,
@@ -220,6 +221,8 @@ export function Sidebar({
   workPresence
 }: SidebarProps): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
+  const navigate = useNavigate()
   const [usageOpen, setUsageOpen] = useState(false)
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -287,8 +290,13 @@ export function Sidebar({
     .join('')
 
   async function handleSignOut(): Promise<void> {
-    setMenuOpen(false)
-    await signOut()
+    setSignOutError(null)
+    if (await signOut()) {
+      setMenuOpen(false)
+      navigate('/auth', { replace: true })
+    } else {
+      setSignOutError('Não foi possível sair. Tente novamente.')
+    }
   }
 
   function handleShortcutClick(id: ShortcutId): void {
@@ -459,6 +467,11 @@ export function Sidebar({
               <LogOut size={15} strokeWidth={1.75} />
               Sair
             </button>
+            {signOutError && (
+              <p className="sidebar-user-menu-error" role="alert">
+                {signOutError}
+              </p>
+            )}
           </div>
         )}
         <button

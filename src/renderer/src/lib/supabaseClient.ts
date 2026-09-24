@@ -16,3 +16,14 @@ export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
     detectSessionInUrl: false
   }
 })
+
+// A recuperação por código cria uma sessão curta que não deve autenticar o app
+// antes de o usuário concluir a troca de senha.
+export const recoverySupabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: 'abapfy-password-recovery'
+  }
+})

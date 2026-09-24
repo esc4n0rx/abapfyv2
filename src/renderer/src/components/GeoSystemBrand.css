@@ -1,0 +1,14 @@
+.geosystem-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.geosystem-geo {
+  color: var(--color-ink);
+}
+
+.geosystem-system {
+  color: color-mix(in srgb, var(--color-primary) 55%, var(--color-ink-subtle));
+}
