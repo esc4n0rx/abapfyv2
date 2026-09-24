@@ -10,22 +10,20 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     strategy:
       fail-fast: false
-      # electron-builder creates/uploads to the same GitHub release from every job.
-      # Serializing them avoids duplicate releases when the tag is new.
-      max-parallel: 1
       matrix:
         include:
           - os: windows-latest
             build-flag: --win
+            artifact: windows
           - os: macos-latest
-            build-flag: --mac --x64
-          - os: macos-latest
-            build-flag: --mac --arm64
+            build-flag: --mac --universal
+            artifact: macos
           - os: ubuntu-latest
             build-flag: --linux
+            artifact: linux
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -51,7 +49,69 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      - name: Build and publish
-        run: pnpm exec electron-builder ${{ matrix.build-flag }} --publish always
+      - name: Build installers
+        run: pnpm exec electron-builder ${{ matrix.build-flag }} --publish never
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          path: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*.AppImage
+            dist/latest*.yml
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+
+      - name: Check required installers
+        run: |
+          test -f release-assets/release-windows/latest.yml
+          test -f release-assets/release-macos/latest-mac.yml
+          test -f release-assets/release-linux/latest-linux.yml
+          compgen -G 'release-assets/release-windows/*.exe'
+          compgen -G 'release-assets/release-macos/*.dmg'
+          compgen -G 'release-assets/release-linux/*.AppImage'
+
+      - name: Prepare release notes
+        run: |
+          awk -v heading="## [${GITHUB_REF_NAME#v}]" '
+            index($0, heading) == 1 { in_section = 1; print; next }
+            in_section && /^## \[/ { exit }
+            in_section { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
+
+      - name: Publish one GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release-assets/release-windows/*.exe \
+            release-assets/release-windows/*.exe.blockmap \
+            release-assets/release-windows/latest.yml \
+            release-assets/release-macos/*.dmg \
+            release-assets/release-macos/*.dmg.blockmap \
+            release-assets/release-macos/latest-mac.yml \
+            release-assets/release-linux/*.AppImage \
+            release-assets/release-linux/latest-linux.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Abapfy $GITHUB_REF_NAME" \
+            --notes-file release-notes.md

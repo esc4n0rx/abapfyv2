@@ -4,6 +4,16 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.10] - 2026-09-24
+
+### Corrigido
+
+- Reúne os instaladores Windows, Linux e macOS em uma única release pública, criada após as
+  três builds concluírem. O pacote macOS é universal para Intel e Apple Silicon.
+- Inclui as melhorias de login, persistência, saída, marca GeoSystem e recuperação de senha
+  introduzidas na versão 0.3.8. O envio do código requer o SMTP e o template documentados em
+  `supabase/email-templates/README.md`.
+
 ## [0.3.9] - 2026-09-24
 
 ### Corrigido
