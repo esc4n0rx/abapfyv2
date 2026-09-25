@@ -4,6 +4,27 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.12] - 2026-09-25
+
+### Adicionado
+
+- Catálogo de modelos de IA no Supabase: master e administradores podem cadastrar, editar,
+  desativar e bloquear modelos por usuário. A seleção no aplicativo respeita essas regras.
+- Portal Notícias com leitura e curtidas para usuários comuns; master e administradores podem
+  publicar e editar artigos em Markdown e criar ou refinar o texto com a IA configurada.
+
+### Corrigido
+
+- Upload colaborativo do drive com validação do caminho cliente/módulo em função restrita;
+  mensagens de erro distinguem validação, Storage e registro do arquivo.
+- Políticas do Storage usam o caminho correto do objeto nas verificações de upload e limpeza.
+
+### Configuração necessária
+
+- Aplicar as migrações `supabase/sql/026_ai_model_catalog.sql` até
+  `supabase/sql/030_client_drive_upload_check.sql` em ordem. A publicação do aplicativo
+  não executa SQL automaticamente. O upload foi confirmado após a migração 030.
+
 ## [0.3.11] - 2026-09-24
 
 ### Adicionado

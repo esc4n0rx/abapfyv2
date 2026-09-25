@@ -188,8 +188,11 @@ export function ClientsScreen({ onNewChat, onOpenChat, workPresence, presenceErr
       const id = crypto.randomUUID()
       const extension = selected.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin'
       const storagePath = `${client.id}/${module.id}/${id}/original.${extension}`
+      const { data: pathAllowed, error: pathError } = await supabase.rpc('can_upload_client_file_path', { p_path: storagePath })
+      if (pathError) throw new Error(`Validação do drive: ${pathError.message}`)
+      if (!pathAllowed) throw new Error('Validação do drive: cliente, módulo ou sessão não autorizados para este caminho.')
       const { error: storageError } = await supabase.storage.from('client-files').upload(storagePath, selected, { upsert: false })
-      if (storageError) throw storageError
+      if (storageError) throw new Error(`Storage: ${storageError.message}`)
       const { data, error: uploadError } = await supabase
         .from('client_files')
         .insert({
@@ -208,7 +211,7 @@ export function ClientsScreen({ onNewChat, onOpenChat, workPresence, presenceErr
         .single()
       if (uploadError) {
         await supabase.storage.from('client-files').remove([storagePath])
-        throw uploadError
+        throw new Error(`Registro do arquivo: ${uploadError.message}`)
       }
       setFiles((current) => [data, ...current])
       setMessage(null)

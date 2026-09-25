@@ -46,12 +46,15 @@ import { fetchParametrosContextBlock } from '@renderer/store/estimativaParametro
 import { parseClarify } from '@renderer/lib/clarify'
 import { EF_DOCX_OUTPUT_CONTRACT } from '@renderer/lib/efDocx'
 import { AI_PROVIDERS } from '@renderer/lib/aiProviders'
+import { useAiModelsStore } from '@renderer/store/aiModelsStore'
+import { NewsScreen } from '@renderer/screens/NewsScreen'
 import { runMcpToolLoop } from '@renderer/lib/mcpRuntime'
 import { loadSkillContent } from '@renderer/lib/skillContent'
 import { buildKnowledgePrompt, searchProjectKnowledge } from '@renderer/lib/projectKnowledge'
 import {
   CLAUDE_EFFORT_LABELS_PT,
   CLAUDE_EFFORT_LEVELS,
+  ROUTER_MODEL,
   fetchApiKey,
   routeConversation,
   routeSkills,
@@ -88,12 +91,13 @@ interface ActiveAgent {
   name: string
 }
 
-type View = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks'
+type View = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks' | 'news'
 
 export function HomeScreen(): JSX.Element {
   const [view, setView] = useState<View>('chat')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
+  const [modelChoiceError, setModelChoiceError] = useState<string | null>(null)
   const [agentMenuOpen, setAgentMenuOpen] = useState(false)
   const [clientMenuOpen, setClientMenuOpen] = useState(false)
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
@@ -142,6 +146,8 @@ export function HomeScreen(): JSX.Element {
 
   const profile = useAuthStore((state) => state.profile)
   const user = useAuthStore((state) => state.user)
+  const { models: managedModels, blocks: modelBlocks, load: loadModels } = useAiModelsStore()
+  useEffect(() => { if (user) void loadModels() }, [user, loadModels])
   const chatScope: WorkScope | null = currentClientId && currentModuleId && (currentChatId || (view === 'chat' && (selectedFolderId || input.trim() || attachments.length > 0)))
     ? { clientId: currentClientId, moduleId: currentModuleId, folderId: selectedFolderId, chatId: currentChatId }
     : null
@@ -222,19 +228,22 @@ export function HomeScreen(): JSX.Element {
   const availableModels = useMemo(
     () =>
       AI_PROVIDERS.filter((provider) => apiKeys[provider.id]?.configured).flatMap((provider) =>
-        provider.models.map((model) => ({
+        managedModels.filter((model) => model.provider === provider.id && model.enabled &&
+          !modelBlocks.some((block) => block.user_id === user?.id && block.provider === model.provider && block.model_id === model.model_id)).map((model) => ({
           provider: provider.id,
           providerName: provider.name,
-          model
+          model: { id: model.model_id, label: model.label, description: model.description }
         }))
       ),
-    [apiKeys]
+    [apiKeys, managedModels, modelBlocks, user?.id]
   )
 
   const selectedProviderDef = defaultProvider
     ? AI_PROVIDERS.find((item) => item.id === defaultProvider)
     : undefined
-  const selectedModelDef = selectedProviderDef?.models.find((model) => model.id === defaultModel)
+  const selectedModelDef = availableModels.find((item) => item.provider === defaultProvider && item.model.id === defaultModel)?.model
+  const routerAllowed = managedModels.some((model) => model.provider === 'claude' && model.model_id === ROUTER_MODEL && model.enabled &&
+    !modelBlocks.some((block) => block.user_id === user?.id && block.provider === 'claude' && block.model_id === ROUTER_MODEL))
 
   function resetSession(): void {
     setCurrentChatId(null)
@@ -408,6 +417,12 @@ export function HomeScreen(): JSX.Element {
       )
       return
     }
+    const { data: modelAllowed, error: modelAccessError } = await supabase.rpc('can_use_ai_model', { p_provider: defaultProvider, p_model_id: defaultModel })
+    if (modelAccessError || !modelAllowed) {
+      pushLocalError('Este modelo está desativado ou bloqueado para seu usuário. Escolha outro modelo em Configurações → Inteligência Artificial.')
+      void loadModels()
+      return
+    }
     if (!currentClientId || !currentModuleId) {
       pushLocalError('Selecione um cliente e módulo antes de iniciar a sessão.')
       setClientMenuOpen(true)
@@ -496,7 +511,7 @@ export function HomeScreen(): JSX.Element {
         agent = { source: manualAgent.source, id: manualAgent.id, name: manualAgent.name }
         prompt = manualAgent.content
         setIsRouting(true)
-        const claudeKey = await fetchApiKey(user.id, 'claude')
+        const claudeKey = routerAllowed ? await fetchApiKey(user.id, 'claude') : null
         if (claudeKey) {
           const routedSkillIds = await routeSkills(
             claudeKey,
@@ -515,7 +530,7 @@ export function HomeScreen(): JSX.Element {
         prompt = projectAgent.content
       } else if (agents.length > 0) {
         setIsRouting(true)
-        const claudeKey = await fetchApiKey(user.id, 'claude')
+        const claudeKey = routerAllowed ? await fetchApiKey(user.id, 'claude') : null
         if (claudeKey) {
           const route = await routeConversation(
             claudeKey,
@@ -835,6 +850,7 @@ export function HomeScreen(): JSX.Element {
         onOpenProjects={() => setView('projects')}
         onOpenClients={() => setView('clients')}
         onOpenTasks={() => setView('tasks')}
+        onOpenNews={() => setView('news')}
         onSelectChat={handleSelectChat}
         onChatRemoved={handleNewSession}
         workPresence={presence}
@@ -845,6 +861,7 @@ export function HomeScreen(): JSX.Element {
       {view === 'projects' && <ProjectsScreen onOpenProject={handleOpenProjectForNewChat} />}
       {view === 'clients' && <ClientsScreen onNewChat={handleClientNewChat} onOpenChat={(id) => void handleSelectChat(id)} workPresence={presence} presenceError={presenceError} onActivityChange={setDriveActivity} />}
       {view === 'tasks' && <TasksScreen />}
+      {view === 'news' && <NewsScreen />}
 
       {view === 'chat' && (
         <div className="home-main">
@@ -1095,6 +1112,7 @@ export function HomeScreen(): JSX.Element {
               <div className="home-composer-spacer" />
 
               <div className="home-model-select" ref={modelMenuRef}>
+                {modelChoiceError && <span role="alert" title={modelChoiceError} className="home-model-error">{modelChoiceError}</span>}
                 <button
                   type="button"
                   className="home-model-trigger"
@@ -1179,7 +1197,10 @@ export function HomeScreen(): JSX.Element {
                           type="button"
                           className="home-model-menu-item"
                           onClick={() => {
-                            setDefaultModel(provider, model.id)
+                            void setDefaultModel(provider, model.id).catch((cause) => {
+                              setModelChoiceError((cause as Error).message)
+                            })
+                            setModelChoiceError(null)
                             setModelMenuOpen(false)
                           }}
                         >

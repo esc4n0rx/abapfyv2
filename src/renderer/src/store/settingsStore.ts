@@ -92,16 +92,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setDefaultModel: async (provider, model) => {
-    set({ defaultProvider: provider, defaultModel: model })
-
     const userId = currentUserId()
     if (!userId) return
 
-    await supabase.from('user_settings').upsert({
+    const { error } = await supabase.from('user_settings').upsert({
       user_id: userId,
       default_ai_provider: provider,
       default_ai_model: model
     })
+    if (error) throw error
+    set({ defaultProvider: provider, defaultModel: model })
   },
 
   saveApiKey: async (provider, apiKey) => {

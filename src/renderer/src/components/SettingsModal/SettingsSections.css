@@ -208,6 +208,23 @@
   font-size: 14px;
 }
 
+.ai-model-management-form, .ai-model-management-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.ai-model-management-form .ai-provider-input { flex: 1 1 145px; min-width: 0; }
+.ai-model-management-row {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+}
+.ai-model-management-row span { flex: 1 1 160px; color: var(--color-ink); }
+.ai-model-management-row small { display: block; color: var(--color-ink-tertiary); }
+.ai-model-management-row label { display: inline-flex; align-items: center; gap: 5px; color: var(--color-ink-muted); }
+
 .ai-provider-list {
   display: flex;
   flex-direction: column;

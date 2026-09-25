@@ -677,6 +677,8 @@
   color: var(--color-ink-tertiary);
 }
 
+.home-model-error { color: #b42318; font-size: 11px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .home-model-menu-empty {
   padding: var(--space-sm);
   font-family: var(--font-text);

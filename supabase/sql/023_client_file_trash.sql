@@ -69,9 +69,9 @@ drop policy if exists client_files_storage_delete on storage.objects;
 create policy client_files_storage_delete_admin on storage.objects for delete to authenticated
   using (bucket_id = 'client-files' and (
     (public.is_abapfy_admin() and exists (
-      select 1 from public.client_files f where f.storage_path = name and f.deleted_at is not null
+      select 1 from public.client_files f where f.storage_path = storage.objects.name and f.deleted_at is not null
     )) or
     (owner_id = auth.uid()::text and not exists (
-      select 1 from public.client_files f where f.storage_path = name
+      select 1 from public.client_files f where f.storage_path = storage.objects.name
     ))
   ));

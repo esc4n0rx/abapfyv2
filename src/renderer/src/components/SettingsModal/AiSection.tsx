@@ -6,6 +6,7 @@ import { useSettingsStore } from '@renderer/store/settingsStore'
 import { useAgentsStore } from '@renderer/store/agentsStore'
 import { useMcpStore, type McpServerItem } from '@renderer/store/mcpStore'
 import { AI_PROVIDERS, type AiProviderId } from '@renderer/lib/aiProviders'
+import { useAiModelsStore, type ManagedAiModel } from '@renderer/store/aiModelsStore'
 import './SettingsSections.css'
 
 interface AccessUser { user_id: string; display_name: string; email: string }
@@ -28,6 +29,9 @@ export function AiSection(): JSX.Element {
   const [drafts, setDrafts] = useState<Record<AiProviderId, string>>({ openai: '', gemini: '', claude: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { models, blocks, load: loadModels, save: saveModel, remove: removeModel, setBlocked } = useAiModelsStore()
+  const [modelDraft, setModelDraft] = useState<ManagedAiModel>({ provider: 'openai', model_id: '', label: '', description: '', enabled: true })
+  const [editingModel, setEditingModel] = useState(false)
   const ownTarget = targetId === user?.id
   const targetRef = useRef(targetId)
   targetRef.current = targetId
@@ -43,6 +47,8 @@ export function AiSection(): JSX.Element {
   useEffect(() => {
     if (!canManage) void loadSettings()
   }, [canManage, loadSettings])
+
+  useEffect(() => { void loadModels() }, [loadModels])
 
   async function refresh(target: string): Promise<void> {
     const [keyResult, serverResult, bindingResult, customResult] = await Promise.all([
@@ -71,6 +77,7 @@ export function AiSection(): JSX.Element {
     try {
       await task()
       await refresh(targetId)
+      await loadModels()
       if (ownTarget) { await loadSettings(); await reloadOwnMcp() }
     } catch (cause) { setError((cause as Error).message) }
     finally { setBusy(false) }
@@ -97,6 +104,13 @@ export function AiSection(): JSX.Element {
       const { error: cause } = await supabase.from('mcp_servers').insert({ ...base, user_id: targetId, enabled: true })
       if (cause) throw cause
     })
+  }
+
+  async function addModel(event: FormEvent): Promise<void> {
+    event.preventDefault()
+    const model = { ...modelDraft, model_id: modelDraft.model_id.trim(), label: modelDraft.label.trim(), description: modelDraft.description.trim() }
+    if (!model.model_id || !model.label) return
+    await act(async () => { await saveModel(model); setModelDraft({ provider: model.provider, model_id: '', label: '', description: '', enabled: true }); setEditingModel(false) })
   }
 
   return <div className="settings-section">
@@ -127,13 +141,36 @@ export function AiSection(): JSX.Element {
         </form>}
         <div className="ai-provider-meta"><a className="ai-provider-help" href={provider.keyHelpUrl} target="_blank" rel="noreferrer">{provider.keyHint} <ExternalLink size={11} /></a>
           {updatedAt && <span className="ai-provider-updated">Atualizada em {new Date(updatedAt).toLocaleString('pt-BR')}</span>}</div>
-        {ownTarget && configured && <div className="ai-model-chips">{provider.models.map((model) => {
-          const selected = defaultProvider === provider.id && defaultModel === model.id
-          return <button key={model.id} type="button" className={`ai-model-chip ${selected ? 'ai-model-chip-active' : ''}`}
-            title={model.description} onClick={() => void setDefaultModel(provider.id, model.id)}>{selected && <Check size={12} />}{model.label}</button>
+        {ownTarget && configured && <div className="ai-model-chips">{models.filter((model) => model.provider === provider.id && model.enabled && !blocks.some((block) => block.user_id === user?.id && block.provider === model.provider && block.model_id === model.model_id)).map((model) => {
+          const selected = defaultProvider === provider.id && defaultModel === model.model_id
+          return <button key={model.model_id} type="button" className={`ai-model-chip ${selected ? 'ai-model-chip-active' : ''}`}
+            title={model.description} onClick={() => void setDefaultModel(provider.id, model.model_id).catch((cause) => setError((cause as Error).message))}>{selected && <Check size={12} />}{model.label}</button>
         })}</div>}
       </div>
     })}</div>
+    {canManage && <div className="ai-integrations-panel"><h3>Catálogo de modelos</h3>
+      <p className="settings-muted">Modelos desativados ficam indisponíveis para todos. O bloqueio por usuário impede a seleção individual.</p>
+      <form className="ai-model-management-form" onSubmit={(event) => void addModel(event)}>
+        <select className="ai-provider-input" value={modelDraft.provider} disabled={editingModel} onChange={(event) => setModelDraft((draft) => ({ ...draft, provider: event.target.value as AiProviderId }))}>
+          {AI_PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+        </select>
+        <input className="ai-provider-input" placeholder="ID exato da API" value={modelDraft.model_id} disabled={editingModel} onChange={(event) => setModelDraft((draft) => ({ ...draft, model_id: event.target.value }))} />
+        <input className="ai-provider-input" placeholder="Nome exibido" value={modelDraft.label} onChange={(event) => setModelDraft((draft) => ({ ...draft, label: event.target.value }))} />
+        <input className="ai-provider-input" placeholder="Descrição" value={modelDraft.description} onChange={(event) => setModelDraft((draft) => ({ ...draft, description: event.target.value }))} />
+        <button type="submit" className="ai-provider-save" disabled={busy || !modelDraft.model_id.trim() || !modelDraft.label.trim()}>{editingModel ? 'Salvar modelo' : 'Adicionar modelo'}</button>
+        {editingModel && <button type="button" className="ai-provider-save" onClick={() => { setEditingModel(false); setModelDraft({ provider: 'openai', model_id: '', label: '', description: '', enabled: true }) }}>Cancelar</button>}
+      </form>
+      {models.map((model) => {
+        const blocked = blocks.some((block) => block.user_id === targetId && block.provider === model.provider && block.model_id === model.model_id)
+        return <div key={`${model.provider}:${model.model_id}`} className="ai-model-management-row">
+          <span><strong>{model.label}</strong> · {AI_PROVIDERS.find((item) => item.id === model.provider)?.name}<small>{model.model_id}</small></span>
+          <label><input type="checkbox" checked={model.enabled} disabled={busy} onChange={() => void act(() => saveModel({ ...model, enabled: !model.enabled }))} /> Ativo</label>
+          <label><input type="checkbox" checked={blocked} disabled={busy || !targetId} onChange={() => void act(() => setBlocked(targetId, model.provider, model.model_id, !blocked))} /> Bloquear para usuário</label>
+          <button type="button" className="ai-provider-save" disabled={busy} onClick={() => { setModelDraft(model); setEditingModel(true) }}>Editar</button>
+          <button type="button" className="ai-provider-remove" title="Remover modelo" disabled={busy} onClick={() => void act(() => removeModel(model.provider, model.model_id))}><Trash2 size={14} /></button>
+        </div>
+      })}
+    </div>}
     {canManage && <div className="ai-integrations-panel"><h3>Integrações MCP</h3>
       <div className="mcp-preset-actions">
         <button type="button" className="mcp-preset-button" disabled={busy || servers.some((server) => server.slug === 'sap-docs')} onClick={() => void addPreset('sap_docs')}>Adicionar SAP Docs</button>

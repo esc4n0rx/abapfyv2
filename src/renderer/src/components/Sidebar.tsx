@@ -13,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   MoreHorizontal,
+  Newspaper,
   Settings,
   Sparkles,
   SquarePen,
@@ -26,18 +27,19 @@ import { UsageModal } from '@renderer/components/UsageModal'
 import { AbapfyMark } from '@renderer/components/AbapfyMark'
 import './Sidebar.css'
 
-type ShortcutId = 'new-session' | 'projects' | 'clients' | 'tasks' | 'skills' | 'agents'
+type ShortcutId = 'new-session' | 'projects' | 'clients' | 'tasks' | 'skills' | 'agents' | 'news'
 
 const SHORTCUTS: { id: ShortcutId; icon: typeof Sparkles; label: string }[] = [
   { id: 'new-session', icon: SquarePen, label: 'Nova Sessão' },
   { id: 'projects', icon: FolderKanban, label: 'Projetos' },
   { id: 'clients', icon: Building2, label: 'Clientes' },
+  { id: 'news', icon: Newspaper, label: 'Notícias' },
   { id: 'tasks', icon: ListChecks, label: 'Tarefas' },
   { id: 'skills', icon: Sparkles, label: 'Skills' },
   { id: 'agents', icon: Bot, label: 'Agentes' }
 ]
 
-export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks'
+export type SidebarView = 'chat' | 'skills' | 'agents' | 'projects' | 'clients' | 'tasks' | 'news'
 
 interface SidebarProps {
   activeView: SidebarView
@@ -49,6 +51,7 @@ interface SidebarProps {
   onOpenProjects: () => void
   onOpenClients: () => void
   onOpenTasks: () => void
+  onOpenNews: () => void
   onSelectChat: (chatId: string) => void
   onChatRemoved?: (chatId: string) => void
   workPresence: WorkPresence[]
@@ -217,6 +220,7 @@ export function Sidebar({
   onOpenProjects,
   onOpenClients,
   onOpenTasks,
+  onOpenNews,
   onSelectChat,
   onChatRemoved,
   workPresence
@@ -306,6 +310,7 @@ export function Sidebar({
     if (id === 'projects') onOpenProjects()
     if (id === 'clients') onOpenClients()
     if (id === 'tasks') onOpenTasks()
+    if (id === 'news') onOpenNews()
     if (id === 'new-session') onNewSession()
   }
 
